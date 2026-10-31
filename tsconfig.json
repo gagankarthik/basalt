@@ -1,11 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -19,7 +24,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
@@ -28,7 +35,30 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next-test/types/**/*.ts",
+    ".next-test/dev/types/**/*.ts",
+    ".next-test2/types/**/*.ts",
+    ".next-test2/dev/types/**/*.ts",
+    ".next-sel/types/**/*.ts",
+    ".next-sel/dev/types/**/*.ts",
+    ".next-land/types/**/*.ts",
+    ".next-land/dev/types/**/*.ts",
+    ".next-acc/types/**/*.ts",
+    ".next-acc/dev/types/**/*.ts",
+    ".next-doc/types/**/*.ts",
+    ".next-doc/dev/types/**/*.ts",
+    ".next-mo/types/**/*.ts",
+    ".next-mo/dev/types/**/*.ts",
+    ".next-ui/types/**/*.ts",
+    ".next-ui/dev/types/**/*.ts",
+    ".next-hm/types/**/*.ts",
+    ".next-hm/dev/types/**/*.ts",
+    ".next-src/types/**/*.ts",
+    ".next-src/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".next-*"
+  ]
 }

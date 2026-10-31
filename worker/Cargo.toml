@@ -1,0 +1,15 @@
+[package]
+name = "basalt-cdc"
+version = "0.1.0"
+edition = "2021"
+description = "Streams committed PostgreSQL changes into Basalt"
+
+[dependencies]
+postgres = "0.19"
+postgres-native-tls = "0.5"
+native-tls = "0.2"
+ureq = { version = "2", features = ["json"] }
+serde_json = "1"
+
+[profile.release]
+strip = true

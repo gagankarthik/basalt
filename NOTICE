@@ -1,0 +1,14 @@
+Basalt
+
+This product includes behaviour ported from dbt-core and dbt-duckdb, copyright dbt Labs, Inc. and the dbt-duckdb contributors,
+used under the Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).
+
+Ported: node selection, incremental strategies, on_schema_change, snapshot strategies, test severity thresholds and source freshness
+status, in src/lib/dbt-select.ts, src/lib/dbt-build.ts and src/lib/dbt-compile.ts. These are TypeScript reimplementations, changed from
+the original Python and Jinja.
+
+dbt is a trademark of dbt Labs, Inc. Basalt isn't affiliated with or endorsed by dbt Labs. dbt itself isn't included with Basalt.
+
+Airbyte connectors: Basalt includes no Airbyte source code. When an admin chooses one, Basalt downloads an unmodified connector from Airbyte's
+public registry and runs it as a separate process. Each connector stays under its own licence, shown at selection: most are the Elastic License 2.0,
+some are MIT. airbyte-cdk is MIT. Airbyte is a trademark of its owner. Basalt isn't affiliated with or endorsed by Airbyte.

@@ -1,0 +1,2 @@
+JSON schemas copied unchanged from https://github.com/OpenLineage/OpenLineage (spec/, commit bad2d7f), used only by tests.
+Copyright contributors to the OpenLineage project. Licensed under the Apache License 2.0; see LICENSE in this folder.

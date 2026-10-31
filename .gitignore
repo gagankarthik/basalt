@@ -39,3 +39,42 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+data/
+.next-test/
+worker/target/
+
+# build output, including test builds
+/.next-*/
+/dist/
+
+# customer data, warehouses and keys never go in the repo
+/data/
+*.duckdb
+*.duckdb.wal
+*.parquet.tmp
+*.key
+*.p12
+*.pfx
+*service-account*.json
+!.env.example
+
+# Python and dbt
+.venv/
+venv/
+__pycache__/
+*.pyc
+dbt_packages/
+/target/
+/logs/
+
+# logs and temp files
+*.log
+*.tmp
+
+# editors and OS
+.vscode/
+.idea/
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
