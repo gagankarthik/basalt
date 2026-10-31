@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Mark } from "@/components/icons";
 import { Btn, Field } from "@/components/ui";
+import { MfaSetup } from "@/components/MfaSetup";
 import { call } from "@/lib/client";
 
 // Only same-site paths, so a crafted link can't send someone elsewhere after they sign in
@@ -13,7 +14,7 @@ export default function Login() {
   const on = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: k === "sample" ? e.target.checked : e.target.value });
   const [sso, setSso] = useState<{ name: string; enforce: boolean } | null>(null);
   useEffect(() => { setError(new URLSearchParams(location.search).get("error") ?? ""); call<{ user: unknown; needsSetup: boolean; sso: { name: string; enforce: boolean } | null }>("/api/auth").then((r) => { if (r.user) window.location.assign(nextPath()); else { setSetup(r.needsSetup); setSso(r.sso); } }); }, []);
-  const [tried, setTried] = useState(false);
+  const [tried, setTried] = useState(false), [step, setStep] = useState<"password" | "code" | "enrol">("password"), [code, setCode] = useState("");
   const errors = {
     workspace: setup && !f.workspace.trim() ? "Enter your company or workspace name." : "",
     name: setup && !f.name.trim() ? "Enter your name." : "",
@@ -25,10 +26,23 @@ export default function Login() {
     e.preventDefault(); setTried(true);
     if (Object.values(errors).some(Boolean)) return;
     setBusy(true); setError("");
-    try { await call("/api/auth", { json: { action: setup ? "setup" : "login", ...f } }); window.location.assign(nextPath()); }
-    catch (err) { setError((err as Error).message); setBusy(false); }
+    try {
+      const r = await call<{ mfaRequired?: boolean; mustEnrol?: boolean }>("/api/auth", { json: { action: setup ? "setup" : "login", ...f, ...(step === "code" ? { code } : {}) } });
+      if (r.mfaRequired) { setStep("code"); setBusy(false); return; }
+      if (r.mustEnrol) { setStep("enrol"); setBusy(false); return; }
+      window.location.assign(nextPath());
+    } catch (err) { setError((err as Error).message); setBusy(false); }
   };
   if (setup === null) return <div className="auth" />;
+  if (step === "enrol") return <div className="auth"><div className="auth-card"><div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 700, fontSize: 18 }}><Mark size={26} />Basalt</div><p className="small muted">Your workspace requires two-factor sign-in.</p><MfaSetup email={f.email} password={f.password} onDone={() => window.location.assign(nextPath())} /></div></div>;
+  if (step === "code") return <div className="auth"><form onSubmit={submit} noValidate>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 700, fontSize: 18 }}><Mark size={26} />Basalt</div>
+    <div><h1>Enter your code</h1><p className="muted">From your authenticator app, or one of your recovery codes.</p></div>
+    <Field label="Code"><input className="input" autoFocus autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} /></Field>
+    {error && <div className="banner bad" role="alert">{error}</div>}
+    <Btn type="submit" variant="primary" disabled={busy || !code.trim()}>{busy ? "Checking" : "Sign in"}</Btn>
+    <Btn type="button" variant="ghost" onClick={() => { setStep("password"); setCode(""); setError(""); }}>Back</Btn>
+  </form></div>;
   return (
     <div className="auth">
       <form onSubmit={submit} noValidate>

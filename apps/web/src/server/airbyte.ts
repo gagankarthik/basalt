@@ -1,4 +1,5 @@
 import "server-only";
+import { assertHostedAllowed } from "@/lib/hosted";
 import childProcess from "node:child_process";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -228,6 +229,7 @@ export type RunOpts = {
 
 /** One connector process. stdout is pulled only as fast as onMessage finishes, so a slow load slows the connector instead of filling memory. */
 export async function runConnector(o: RunOpts): Promise<void> {
+  await assertHostedAllowed({ type: "airbyte" });
   const dir = privateDir();
   let stderr = "", lastError = "", trace = "", incomplete = "", timedOut = "", softStopped = false, kid: { p: Kid; docker?: string } | undefined;
   const write = (name: string, v: unknown) => { const f = joinPath(dir, name); fs.writeFileSync(f, JSON.stringify(v), { mode: 0o600 }); return f; };

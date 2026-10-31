@@ -1280,3 +1280,10 @@ input::placeholder, textarea::placeholder { color: var(--ink-3) !important; opac
 /* A table beside other content takes its full height and the page scrolls once. Only a page's single table scrolls inside itself */
 .body > .dt-edge:not(:last-child), .body > section:not(:last-child) > .dt-edge { flex: none; }
 .tbl td.cell-clip { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Two-factor sign-in */
+.account-sec { display: grid; gap: 16px; max-width: 560px; } .account-sec h2 { font-size: 16px; }
+.mfa-qr { width: 176px; height: 176px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); }
+.mfa-codes { white-space: pre; display: block; columns: 2; }
+.auth-card { display: grid; gap: 16px; width: 100%; max-width: 400px; }
+/* Once a session ends nothing behind the dialog stays readable, because the screen may be unattended */
+.session-shield { position: fixed; inset: 0; z-index: 900; background: var(--bg); }

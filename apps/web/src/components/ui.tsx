@@ -218,6 +218,7 @@ export function ConnectionStatus() {
   return <>
     {offline ? <div className="net-bar bad" role="alert"><Icon name="warn" />You&apos;re offline. You&apos;re seeing the last data loaded, and new changes won&apos;t save until you reconnect.</div>
       : slow ? <div className="net-bar" role="status"><Spinner />This is taking longer than usual. Your connection may be slow.</div> : null}
+    {expired && <div className="session-shield" aria-hidden="true" />}
     {expired && <Modal locked title="Your session has ended" onClose={() => {}} foot={<a className="btn primary" href={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}>Sign in again</a>}><p>For your security, you were signed out. Sign in again to return to this page. Changes you hadn&apos;t saved may need to be made again.</p></Modal>}
   </>;
 }
@@ -265,7 +266,7 @@ export const AccountMenu = ({ user, onSignOut, trigger = "tb-account" }: { user:
   <Pop align="right" width={280} trigger={(_, t) => <button className={trigger} aria-label="Account menu" onClick={t}><Avatar name={user.name} size={32} /></button>}>
     {(close) => <div className="acct">
       <div className="acct-head"><Avatar name={user.name} size={42} /><div><b>{user.name}</b><span>{user.email}</span>{user.role && <em>{user.role[0].toUpperCase() + user.role.slice(1)}</em>}</div></div>
-      <div className="acct-items"><Link href="/home" onClick={close}><Icon name="home" />Workspace</Link><Link href="/settings" onClick={close}><Icon name="settings" />Settings</Link></div>
+      <div className="acct-items"><Link href="/home" onClick={close}><Icon name="home" />Workspace</Link><Link href="/account" onClick={close}><Icon name="shield" />Your account</Link><Link href="/settings" onClick={close}><Icon name="settings" />Settings</Link></div>
       <div className="acct-items"><button onClick={onSignOut}><Icon name="logout" />Sign out</button></div>
     </div>}
   </Pop>

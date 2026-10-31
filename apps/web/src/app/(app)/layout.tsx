@@ -72,6 +72,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!item) return;
     try { const old = JSON.parse(localStorage.getItem("basalt-recents") ?? "[]") as { href: string }[]; localStorage.setItem("basalt-recents", JSON.stringify([item, ...old.filter((x) => x.href !== item.href)].slice(0, 8))); } catch { /* storage may be blocked */ }
   }, [path, config]);
+  // Checks in once a minute even on a page that doesn't poll, so an idle session locks the screen rather than leaving data on it, and someone typing a long form stays signed in
+  useEffect(() => { const t = setInterval(() => { call<{ user: unknown }>("/api/auth").then((r) => { if (!r.user) useNet.setState({ expired: true }); }).catch(() => {}); }, 6e4); return () => clearInterval(t); }, []);
   if (failed) return <div className="auth"><ErrorState retry={() => location.reload()}>{failed}</ErrorState></div>;
   if (!config || !user) return <div className="auth"><div style={{ width: 260, display: "grid", gap: 8 }}><Sk h={18} /><Sk w="70%" /></div></div>;
   const parent = parentOf(path), current = ALL.find(([href]) => href === parent || parent.startsWith(`${href}/`)), section = sectionOf(path);

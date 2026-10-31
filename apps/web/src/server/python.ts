@@ -1,4 +1,5 @@
 import "server-only";
+import { assertCodeAllowed } from "@/lib/hosted";
 import childProcess from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -25,6 +26,7 @@ export function pythonVersion(): Promise<string | null> {
 
 /** Runs runner.py in dir with its fixed input, output and code files, as a separate process with no server secrets. */
 export function runPythonFiles(dir: string): Promise<string> {
+  assertCodeAllowed();
   return new Promise((resolve, reject) => {
     // only what Python needs to start: server secrets in the environment aren't passed on
     const env = { PATH: process.env.PATH, SYSTEMROOT: process.env.SYSTEMROOT, TEMP: dir, TMP: dir, HOME: dir, PYTHONIOENCODING: "utf-8" } as unknown as NodeJS.ProcessEnv;

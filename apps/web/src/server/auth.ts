@@ -1,9 +1,16 @@
 import "server-only";
 import crypto from "node:crypto";
 import { appKey, getUsers, type StoredUser } from "./files";
+import { getSecurity } from "./security";
+import { ACTIVE_HEADER, parseSession, sessionVerdict } from "@/lib/sessionPolicy";
 import type { Role } from "@/lib/types";
 
-const COOKIE = "basalt_session", DAYS = 7;
+const COOKIE = "basalt_session";
+/**
+ * When each session was last used by a person. On globalThis because routes are bundled separately.
+ * shortcut: held in memory, so a restart gives everyone a fresh idle window; one server per customer makes that fine, store it if that ever changes.
+ */
+const lastSeen: Map<string, number> = ((globalThis as { __basaltLastSeen?: Map<string, number> }).__basaltLastSeen ??= new Map());
 const RANK: Record<Role, number> = { viewer: 0, editor: 1, admin: 2 };
 const sign = (s: string) => crypto.createHmac("sha256", appKey()).update(s).digest("base64url");
 
@@ -14,8 +21,10 @@ export function readSigned(raw: string): string | null {
   return i > 0 && sig.length === good.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(good)) ? value : null;
 }
 export function sessionCookie(user: StoredUser, secure: boolean) {
-  const payload = `${user.id}.${Date.now() + DAYS * 864e5}.${user.sessions ?? 0}`;
-  return `${COOKIE}=${payload}.${sign(payload)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${DAYS * 86400}${secure ? "; Secure" : ""}`;
+  const { maxHours } = getSecurity(), now = Date.now(), sid = crypto.randomBytes(9).toString("base64url");
+  const payload = `${user.id}.${now + maxHours * 36e5}.${user.sessions ?? 0}.${now}.${sid}`;
+  lastSeen.set(sid, now);
+  return `${COOKIE}=${payload}.${sign(payload)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxHours * 3600}${secure ? "; Secure" : ""}`;
 }
 export const clearCookie = () => `${COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
 
@@ -24,11 +33,14 @@ export function currentUser(req: Request): StoredUser | null {
   if (!raw) return null;
   const i = raw.lastIndexOf("."), payload = raw.slice(0, i), sig = raw.slice(i + 1), good = sign(payload);
   if (sig.length !== good.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
-  const [id, exp, sessions] = payload.split(".");
-  if (Number(exp) < Date.now()) return null;
-  const user = getUsers().find((u) => u.id === id);
+  const s = parseSession(payload), now = Date.now(), policy = getSecurity();
+  if (sessionVerdict(s, lastSeen.get(s.sid), now, policy) !== "ok") { lastSeen.delete(s.sid); return null; }
+  const user = getUsers().find((u) => u.id === s.id);
   // Signing out raises the user's number, which ends every copy of their cookie, including a stolen one
-  return user && Number(sessions ?? 0) === (user.sessions ?? 0) ? user : null;
+  if (!user || s.sessions !== (user.sessions ?? 0)) return null;
+  // A session first seen since a restart starts its idle time now, but background polling never extends it
+  if (req.headers.get(ACTIVE_HEADER) || !lastSeen.has(s.sid)) lastSeen.set(s.sid, now);
+  return user;
 }
 
 export class HttpError extends Error {

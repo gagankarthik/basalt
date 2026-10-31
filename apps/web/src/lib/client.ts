@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { ACTIVE_HEADER } from "./sessionPolicy";
 import { configDelta, emptyDelta } from "./configCheck";
 import { create } from "zustand";
 import type { Column, Config, Member, Result, Widget } from "./types";
@@ -28,6 +29,11 @@ const SLOW_MS = 5000;
 const LONG_RUNNING = /\/api\/(runs|connections|exports)/;
 let waiting = 0;
 
+/** Whether a person has used the page in the last minute. Polling sends no input, so it can't keep an abandoned session alive. */
+let lastInput = 0;
+if (typeof window !== "undefined") for (const e of ["pointerdown", "pointermove", "keydown", "wheel", "touchstart"]) window.addEventListener(e, () => { lastInput = Date.now(); }, { passive: true, capture: true });
+const activeHeaders = (): Record<string, string> => (Date.now() - lastInput < 6e4 ? { [ACTIVE_HEADER]: "1" } : {});
+
 export async function call<T = unknown>(url: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const { json, ...rest } = init ?? {};
   const track = !LONG_RUNNING.test(url);
@@ -35,7 +41,7 @@ export async function call<T = unknown>(url: string, init?: RequestInit & { json
   if (track) { waiting++; timer = setTimeout(() => useNet.setState({ slow: true }), SLOW_MS); }
   let res: Response;
   try {
-    res = await fetch(url, json !== undefined ? { ...rest, method: rest.method ?? "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(json) } : rest);
+    res = await fetch(url, json !== undefined ? { ...rest, method: rest.method ?? "POST", headers: { "content-type": "application/json", ...activeHeaders() }, body: JSON.stringify(json) } : { ...rest, headers: { ...activeHeaders(), ...(rest.headers as Record<string, string> | undefined) } });
   } catch {
     throw new Error(navigator.onLine ? "Basalt's server can't be reached. Check that it's running, then try again." : "You're offline. Reconnect, then try again.");
   } finally {

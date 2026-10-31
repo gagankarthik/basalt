@@ -96,6 +96,12 @@ Follow the install steps on the machine, or build the included `Dockerfile` and 
 
 **Managed PostgreSQL.** TLS verifies the server certificate. Paste your provider's CA certificate on the connection for RDS, Aurora and Cloud SQL. Azure Database uses public CAs, so it needs none. For Cloud SQL by IP address, also choose to check the CA only, because its certificate doesn't name the IP.
 
+## Hosting for customers
+
+Set `BASALT_HOSTED=1` when Basalt runs on your servers for other companies, one container and disk per customer. It refuses what's only safe on someone's own server: signing in with the server's own cloud identity, connections to internal addresses, Airbyte connectors and Python. Give customer containers no route to internal networks as well, because a hostname can change after it's checked.
+
+`/api/health` answers without sign-in, for a load balancer or monitor. It returns 503 if the warehouse or disk can't be used.
+
 ## Real-time sync
 
 Real-time sync needs a small worker alongside Basalt, and requires Rust to build.

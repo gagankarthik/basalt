@@ -93,31 +93,31 @@ function Dashboard() {
     <Box x={cx - 0.13} y={cy - 1.45} z={0.8} w={0.26} d={2.9} h={2.3} />
     <OnFace x={cx + 0.13} y={cy + 1.45} z={3.1}>
       <rect x="5" y="5" width="104" height="68" rx="3" fill="#f6f8fb" stroke="#aab4c3" />
-      {[16, 26, 21, 36, 31, 46].map((h, k) => <rect key={k} x={13 + k * 15} y={66 - h} width="9" height={h} rx="1" fill={k === 5 ? "#0f9d8a" : "#1457d2"} />)}
+      {[16, 26, 21, 36, 31, 46].map((h, k) => <rect key={k} x={13 + k * 15} y={66 - h} width="9" height={h} rx="1" fill={k === 5 ? "#0f9d8a" : "#4124fb"} />)}
     </OnFace>
   </g>;
 }
 
 const SOURCES: [BrandName, number][] = [["postgres", -4], ["mysql", -2], ["mariadb", 0], ["parquet", 2], ["json", 4]];
-const STATIONS: [string, string, string][] = [["Masking", "Before storage", "#b27c0e"], ["Warehouse", "On your server", "#1457d2"], ["Transformations", "SQL, Python, no-code", "#1457d2"], ["Dashboards", "For the whole team", "#1457d2"]];
+const STATIONS: [string, string, string][] = [["Masking", "Before storage", "#b27c0e"], ["Warehouse", "Columnar and fast", "#4124fb"], ["Transformations", "SQL, Python, no-code", "#4124fb"], ["Dashboards", "For the whole team", "#4124fb"]];
 
 export default function HeroIso() {
   const bus = line([-2.2, -4], [-2.2, 4]);
   const feeds = SOURCES.map(([, y]) => line([-5.1, y], [-2.2, y]));
   const trunk = line([-2.2, 0], [0, 0], [STEP, 0], at(1), [2 * STEP, -STEP], at(2), [3 * STEP, -2 * STEP], at(3));
   return (
-    <svg className="lp-river" viewBox="0 0 1200 425" role="img" aria-label="PostgreSQL, MySQL, MariaDB, Parquet and JSON flow into Basalt, through masking before storage, a warehouse on your server, transformations in SQL, Python or no-code, and dashboards for the whole team">
+    <svg className="lp-river" viewBox="0 0 1200 425" role="img" aria-label="PostgreSQL, MySQL, MariaDB, Parquet and JSON flow into Basalt, through masking before storage, a warehouse, transformations in SQL, Python or no-code, and dashboards for the whole team">
       <defs>
         <Grad id="h-w-t" stops={["#ffffff", "#eef3fb"]} /><Grad id="h-w-l" stops={["#d3dce9", "#b9c5d7"]} /><Grad id="h-w-r" stops={["#eaeff7", "#d3dce9"]} />
         <Grad id="h-p-t" stops={["rgba(255,255,255,.92)", "rgba(226,235,250,.62)"]} /><Grad id="h-p-w" stops={["#ffffff", "#f3f6fb"]} />
-        <Grad id="h-b-t" stops={["#5a92f4", "#1f5fe0"]} /><Grad id="h-b-l" stops={["#123a86", "#0c2a63"]} /><Grad id="h-b-r" stops={["#2460cf", "#153f95"]} />
+        <Grad id="h-b-t" stops={["#7a66ff", "#4124fb"]} /><Grad id="h-b-l" stops={["#241490", "#190d6b"]} /><Grad id="h-b-r" stops={["#3a20d8", "#28169c"]} />
         <Grad id="h-a-t" stops={["#8bf3e1", "#3fd6bf"]} /><Grad id="h-a-l" stops={["#10a08d", "#0a7a6b"]} /><Grad id="h-a-r" stops={["#35cab5", "#179a88"]} />
         <Grad id="h-m-t" stops={["#fcdc7c", "#efb72c"]} /><Grad id="h-m-l" stops={["#c48c13", "#91660a"]} /><Grad id="h-m-r" stops={["#e6ae2d", "#bb8515"]} />
-        <Grad id="h-c-w" across stops={["#bcc8da", "#f6f8fc", "#dfe6f0", "#aebbcf"]} /><Grad id="h-c-b" across stops={["#10357c", "#3f7bec", "#1f56c4", "#0d2c68"]} />
+        <Grad id="h-c-w" across stops={["#bcc8da", "#f6f8fc", "#dfe6f0", "#aebbcf"]} /><Grad id="h-c-b" across stops={["#1f1180", "#6650ff", "#3a20d8", "#170c66"]} />
         <filter id="h-soft" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="11" /></filter>
       </defs>
-      {[0, 1, 2, 3].map((i) => { const [x, y] = at(i); return <polygon key={i} points={pts([x - 1.5, y - 1.2], [x + 2.2, y - 1.2], [x + 2.2, y + 2.2], [x - 1.5, y + 2.2])} fill="rgb(24 60 130 / .2)" filter="url(#h-soft)" />; })}
-      {SOURCES.map(([l, y]) => <polygon key={l} points={pts([-6.8, y - 0.6], [-4.7, y - 0.6], [-4.7, y + 1.2], [-6.8, y + 1.2])} fill="rgb(24 60 130 / .16)" filter="url(#h-soft)" />)}
+      {[0, 1, 2, 3].map((i) => { const [x, y] = at(i); return <polygon key={i} points={pts([x - 1.5, y - 1.2], [x + 2.2, y - 1.2], [x + 2.2, y + 2.2], [x - 1.5, y + 2.2])} fill="rgb(40 28 130 / .2)" filter="url(#h-soft)" />; })}
+      {SOURCES.map(([l, y]) => <polygon key={l} points={pts([-6.8, y - 0.6], [-4.7, y - 0.6], [-4.7, y + 1.2], [-6.8, y + 1.2])} fill="rgb(40 28 130 / .16)" filter="url(#h-soft)" />)}
       {feeds.map((d, i) => <g key={d}><path d={d} className="lp-stream base" /><path d={d} className="lp-stream flow" style={{ animationDelay: `${-i * 0.4}s` }} /></g>)}
       <path d={bus} className="lp-stream base" /><path d={bus} className="lp-stream flow" />
       <path d={trunk} className="lp-trunk base" /><path d={trunk} className="lp-trunk flow" />
@@ -130,6 +130,7 @@ export default function HeroIso() {
         <path d={`M${sx} ${sy + 58}V${top - 2}`} stroke={c} strokeWidth="1.500" /><circle cx={sx} cy={sy + 58} r="2.500" fill={c} />
         <text x={sx} y={top + 16} textAnchor="middle">{a}</text><text className="sub" x={sx} y={top + 37} textAnchor="middle">{b}</text>
       </g>; })}
+      {(() => { const top = P(...at(0))[1] + 72; return <g><text x={112} y={top + 16} textAnchor="middle">Your databases</text><text className="sub" x={112} y={top + 37} textAnchor="middle">Read-only</text></g>; })()}
     </svg>
   );
 }

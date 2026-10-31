@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { IDLE_OPTIONS, MAX_OPTIONS } from "@/lib/sessionPolicy";
 import DataTable from "@/components/DataTable";
 import { Icon } from "@/components/icons";
 import { Avatar, Btn, Confirm, ErrorState, Field, Modal, PageHead, PermissionDenied, Pop, Sel, LoadingTable, Tabs, toast } from "@/components/ui";
@@ -10,7 +11,7 @@ const ROLES: [Role, string][] = [["admin", "Admin"], ["editor", "Editor"], ["vie
 const ABOUT: [string, string][] = [["Admin", "Everything, including members and removing connections"], ["Editor", "Connections, pipelines, models, dashboards and any SQL"], ["Viewer", "Dashboards, data views and read-only SQL"]];
 
 type Sso = { enabled: boolean; name: string; issuer: string; clientId: string; publicUrl: string; defaultRole: Role; allowedDomain: string; enforce: boolean; trustEmails?: boolean; hasSecret: boolean };
-type Admin = { members: Member[]; audit: AuditEntry[]; rls: RlsRule[]; sso: Sso };
+type Admin = { members: Member[]; audit: AuditEntry[]; rls: RlsRule[]; sso: Sso; security: { requireMfa: boolean; idleMinutes: number; maxHours: number } };
 
 function RowAccess({ members, saved, onSave }: { members: Member[]; saved: RlsRule[]; onSave: (r: RlsRule[]) => void }) {
   const viewers = members.filter((m) => m.role === "viewer");
@@ -66,7 +67,7 @@ export default function Members() {
         {tab === "Members" && <Pop align="right" width={360} trigger={(_, t) => <Btn icon="info" variant="ghost" aria-label="What each role can do" title="What each role can do" onClick={t} />}><h2 style={{ fontSize: 14, marginBottom: 8 }}>What each role can do</h2><dl className="kv">{ABOUT.map(([a, b]) => <div key={a} style={{ display: "contents" }}><dt>{a}</dt><dd>{b}</dd></div>)}</dl></Pop>}
         {tab === "Members" && <Btn icon="plus" variant="primary" onClick={() => { setF({ name: "", email: "", password: "", role: "viewer" }); setFormErr(""); setTried(false); setAdd(true); }}>Add member</Btn>}
       </PageHead>
-      <Tabs tabs={["Members", "Row access", "Single sign-on", "Audit log"]} value={tab} onChange={setTab} />
+      <Tabs tabs={["Members", "Row access", "Single sign-on", "Sign-in rules", "Audit log"]} value={tab} onChange={setTab} />
       <div className="body">
         {err && <ErrorState retry={() => { setErr(""); void load(); }}>{err}</ErrorState>}
         {!data && !err && <LoadingTable label="Loading members" />}
@@ -76,13 +77,24 @@ export default function Members() {
             columns={[
               { id: "name", header: "Name", width: 280, hideable: false, sortValue: (m) => m.name, searchValue: (m) => `${m.name} ${m.email}`, cell: (m) => <span className="person"><Avatar name={m.name} /><span className="stack"><b>{m.name}{m.id === user!.id && <span className="badge" style={{ marginLeft: 6 }}>You</span>}</b><small>{m.email}</small></span></span> },
               { id: "role", header: "Role", width: 170, sortValue: (m) => m.role, cell: (m) => <Sel aria-label={`Role for ${m.name}`} options={ROLES} value={m.role} onChange={(v) => act({ action: "role", id: m.id, role: v }, `${m.name} is now ${v}`)} /> },
+              { id: "mfa", header: "Two-factor", width: 130, sortValue: (m) => (m.mfaOn ? 1 : 0), cell: (m) => (m.mfaOn ? <span className="badge good">On</span> : <span className="muted">Off</span>) },
               { id: "added", header: "Added", width: 180, sortValue: (m) => m.createdAt, cell: (m) => when(m.createdAt) },
-              { id: "actions", header: "", width: 70, hideable: false, align: "end", cell: (m) => (m.id !== user!.id ? <Btn icon="trash" variant="ghost" aria-label={`Remove ${m.name}`} onClick={() => setDel(m)} /> : null) },
+              { id: "actions", header: "", width: 260, hideable: false, align: "end", cell: (m) => (m.id !== user!.id ? <span className="row-actions"><Btn variant="ghost" onClick={() => act({ action: "end-sessions", id: m.id }, `${m.name} is signed out`)}>Sign out</Btn>{m.mfaOn && <Btn variant="ghost" onClick={() => act({ action: "mfa-reset", id: m.id }, `Two-factor sign-in reset for ${m.name}`)}>Reset two-factor</Btn>}<Btn icon="trash" variant="ghost" aria-label={`Remove ${m.name}`} onClick={() => setDel(m)} /></span> : null) },
             ]} />
         </>}
         {data && tab === "Row access" && <RowAccess members={data.members} saved={data.rls} onSave={(rules) => act({ action: "rls", rules }, "Row access rules saved")} />}
         {data && tab === "Single sign-on" && <SsoForm saved={data.sso} onSave={(s) => act({ ...s, action: "sso" }, "Single sign-on saved")} />}
+        {data && tab === "Sign-in rules" && <section className="account-sec">
+          <h2>Two-factor sign-in</h2>
+          <p className="small muted">{data.members.filter((m) => m.mfaOn).length} of {data.members.length} members have it on. Requiring it signs out everyone without it, and asks them to set it up when they next sign in with a password. People using single sign-on follow your provider&apos;s rules.</p>
+          <label className="check"><input type="checkbox" checked={data.security.requireMfa} onChange={(e) => act({ action: "security", requireMfa: e.target.checked }, e.target.checked ? "Two-factor sign-in is now required" : "Two-factor sign-in is no longer required")} />Require two-factor sign-in for everyone</label>
+          <h2 style={{ marginTop: 16 }}>Sessions</h2>
+          <Field label="Sign out after no activity" hint="Counts someone using the page, not a page left open. Leave it off for screens that show a dashboard all day."><Sel options={IDLE_OPTIONS.map(([v, l]): [string, string] => [String(v), l])} value={String(data.security.idleMinutes)} onChange={(v) => act({ action: "security", idleMinutes: Number(v) }, "Session limits saved")} /></Field>
+          <Field label="Longest a session can last" hint="Applies to people already signed in."><Sel options={MAX_OPTIONS.map(([v, l]): [string, string] => [String(v), l])} value={String(data.security.maxHours)} onChange={(v) => act({ action: "security", maxHours: Number(v) }, "Session limits saved")} /></Field>
+          <div><Btn onClick={() => act({ action: "end-sessions" }, "Everyone else is signed out")}>Sign everyone else out</Btn></div>
+        </section>}
         {data && tab === "Audit log" && <>
+          <div><a className="btn" href="/api/admin/audit" download><Icon name="download" />Download the full log</a></div>
           <DataTable<AuditEntry> id="audit" rows={data.audit} rowKey={(a) => a.id} selectable={false} exportable exportName="audit-log" searchPlaceholder="Search audit entries" initialSort={{ id: "at", dir: "desc" }}
             filters={[{ id: "kind", label: "Type", value: (a) => (a.sensitive ? "Personal data and access" : "Everything else") }, { id: "actor", label: "Who", value: (a) => a.actor }]}
             columns={[

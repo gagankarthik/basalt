@@ -84,4 +84,4 @@ export type Config = { notebooks?: Notebook[]; connections: Connection[]; pipeli
 export type AuditEntry = { id: string; at: string; actor: string; action: string; detail: string; sensitive: boolean };
 export type RlsRule = { id: string; userId: string; column: string; values: string[] };
 export type SalesRequest = { id: string; at: string; name: string; email: string; company: string; teamSize: string; sources: string; message: string };
-export type Member = { id: string; email: string; name: string; role: Role; createdAt: string };
+export type Member = { id: string; email: string; name: string; role: Role; createdAt: string; mfaOn?: boolean; mfaCodesLeft?: number };

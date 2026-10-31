@@ -1,4 +1,5 @@
 import "server-only";
+import { assertHostedAllowed } from "@/lib/hosted";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -233,6 +234,7 @@ export async function openSource(conn: Connection, password?: string): Promise<S
   if (conn.type === "sample") return localSource("sample");
   if (conn.type === "file") return localSource(`file_${conn.slug}`);
   const pw = password ?? getSecret(conn.id) ?? "";
+  await assertHostedAllowed(conn, pw);
   if (conn.type === "s3" || conn.type === "gcs" || conn.type === "azure") return storageSource(conn, pw);
   if (conn.type === "bigquery" || conn.type === "snowflake") return cloudSource(conn, pw);
   if (conn.type === "airbyte") return airbyteSource(conn, pw);

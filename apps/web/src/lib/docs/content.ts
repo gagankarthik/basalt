@@ -1045,6 +1045,18 @@ Real-time sync and browser downloads send no events. Sending has been checked ag
 
 Go to **Members and audit**, choose **Add member**, and enter a name, email, temporary password and role.
 
+## Session limits
+
+Admins set these under **Members and audit**, then **Sign-in rules**: how long without activity before someone is signed out, and the longest a session can last. Changes apply to people already signed in. Activity means someone using the page, so a page left open doesn't count. Leave the first off for screens that show a dashboard all day.
+
+Signing out ends your session on every device. An admin can also sign out one member, or everyone else.
+
+## Two-factor sign-in
+
+Open **Your account** from your profile menu and choose **Set up**. Scan the code with an authenticator app, enter the code it shows, and save your recovery codes. Each recovery code works once.
+
+An admin can require it for everyone under **Members and audit**, then **Sign-in rules**, after turning it on for their own account. An admin can also reset it for someone who has lost their phone. People using single sign-on follow your provider's rules.
+
 ## Roles
 
 | Role | Can do |

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -H 127.0.0.1",
     "lint": "eslint",
-    "test": "node --test src/lib/selectList.test.ts src/lib/ingest.test.ts src/lib/live.test.ts src/lib/sql.test.ts src/lib/airbyte.test.ts src/lib/xml.test.ts src/lib/nested.test.ts src/lib/sourceRows.test.ts src/lib/catalogSearch.test.ts src/server/sources/sources.test.ts src/lib/transform.test.ts src/lib/query.test.ts src/lib/base.test.ts src/lib/dax.test.ts src/lib/semantic.test.ts src/lib/webhook.test.ts src/lib/apps.test.ts src/lib/openlineage.test.ts src/lib/dbt-compile.test.ts src/lib/dbt-build.test.ts src/lib/dbt-compare.test.ts src/lib/docs/docs.test.ts src/lib/viewer.test.ts src/lib/loginThrottle.test.ts src/lib/notebook.test.ts src/lib/pythonRunner.test.ts src/lib/onboarding.test.ts src/lib/analysisTemplates.test.ts src/lib/xlsx.test.ts src/lib/customVisual.test.ts src/lib/mLanguage.test.ts src/lib/delta.test.ts src/lib/fieldFormat.test.ts src/lib/softDelete.test.ts src/lib/configCheck.test.ts src/lib/textEncoding.test.ts src/lib/cloudErrors.test.ts src/lib/csvTypes.test.ts src/lib/buildRetry.test.ts",
+    "test": "node --test src/lib/selectList.test.ts src/lib/ingest.test.ts src/lib/live.test.ts src/lib/sql.test.ts src/lib/airbyte.test.ts src/lib/xml.test.ts src/lib/nested.test.ts src/lib/sourceRows.test.ts src/lib/catalogSearch.test.ts src/server/sources/sources.test.ts src/lib/transform.test.ts src/lib/query.test.ts src/lib/base.test.ts src/lib/dax.test.ts src/lib/semantic.test.ts src/lib/webhook.test.ts src/lib/apps.test.ts src/lib/openlineage.test.ts src/lib/dbt-compile.test.ts src/lib/dbt-build.test.ts src/lib/dbt-compare.test.ts src/lib/docs/docs.test.ts src/lib/viewer.test.ts src/lib/loginThrottle.test.ts src/lib/notebook.test.ts src/lib/pythonRunner.test.ts src/lib/onboarding.test.ts src/lib/analysisTemplates.test.ts src/lib/xlsx.test.ts src/lib/customVisual.test.ts src/lib/mLanguage.test.ts src/lib/delta.test.ts src/lib/fieldFormat.test.ts src/lib/softDelete.test.ts src/lib/configCheck.test.ts src/lib/textEncoding.test.ts src/lib/cloudErrors.test.ts src/lib/csvTypes.test.ts src/lib/buildRetry.test.ts src/lib/hosted.test.ts src/lib/totp.test.ts src/lib/sessionPolicy.test.ts",
     "check:build": "node scripts/check-build.mjs"
   },
   "dependencies": {
@@ -34,6 +34,7 @@
     "next": "16.4.3",
     "nodemailer": "^10.3.1",
     "pg": "^8.23.1",
+    "qrcode": "1.5.4",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
@@ -46,6 +47,7 @@
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

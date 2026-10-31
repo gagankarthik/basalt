@@ -1,4 +1,5 @@
 import "server-only";
+import { assertHostedAllowed } from "@/lib/hosted";
 import { gcsToken, roleCredentials } from "./sources/common";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -20,6 +21,7 @@ type Stream = { format: string; paths: string[] };
 
 /** A throwaway engine with network access. It's separate from the warehouse, which stays locked, and user SQL never reaches it. */
 export async function openGateway(conn?: Connection, secret?: string) {
+  if (conn) await assertHostedAllowed(conn, secret);
   const db = await DuckDBInstance.create(":memory:");
   const c = await db.connect();
   await c.run("INSTALL httpfs; LOAD httpfs;");

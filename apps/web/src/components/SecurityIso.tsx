@@ -6,7 +6,7 @@ const g = (id: string) => `url(#s-${id})`;
 const SLAB: Tone = { top: g("d-t"), left: g("d-l"), right: g("d-r"), edge: "rgba(255,255,255,.34)" };
 const BLOCK: Tone = { top: g("k-t"), left: g("d-l"), right: g("k-r"), edge: "rgba(255,255,255,.42)", cyl: g("c-k") };
 const GLASS: Tone = { top: g("g-t"), left: g("g-l"), right: g("g-r"), edge: "rgba(173,203,250,.85)" };
-const BLUE: Tone = { top: g("b-t"), left: g("b-l"), right: g("b-r"), edge: "#8fb2ee", cyl: g("c-b") };
+const BLUE: Tone = { top: g("b-t"), left: g("b-l"), right: g("b-r"), edge: "#b3a8ff", cyl: g("c-b") };
 const AMBER_SLAB: Tone = { top: g("m-t"), left: g("m-l"), right: g("m-r"), edge: "#f0c14b" };
 const AQUA: Tone = { top: g("a-t"), left: g("a-l"), right: g("a-r"), edge: "#a5f1e4", cyl: g("c-a") };
 
@@ -36,7 +36,7 @@ function Warehouse({ z }: { z: number }) {
     <Box x={-a} y={-a} z={top} w={a * 2} d={t} h={h} t={GLASS} /><Box x={-a} y={-a} z={top} w={t} d={a * 2} h={h} t={GLASS} />
     {[0, 0.62, 1.24].map((d, k) => <Disc key={d} cx={0} cy={0} z={top + d} r={1.05} h={0.46} t={k === 2 ? BLUE : BLOCK} />)}
     <Box x={a - t} y={-a} z={top} w={t} d={a * 2} h={h} t={GLASS} /><Box x={-a} y={a - t} z={top} w={a * 2} d={t} h={h} t={GLASS} />
-    <Mark x={a} y={0.75} z={top + h - 0.1} icon="x" color="#8fb2ee" />
+    <Mark x={a} y={0.75} z={top + h - 0.1} icon="x" color="#b3a8ff" />
   </g>;
 }
 function Roles({ z }: { z: number }) {
@@ -51,7 +51,7 @@ function Roles({ z }: { z: number }) {
 
 const LAYERS: [string, string, string, (z: number) => React.ReactNode][] = [
   ["Roles and audit", "Checked on every API call", "#fff", (z) => <Roles z={z} />],
-  ["Sandboxed warehouse", "SQL can't read files or the network", "#8fb2ee", (z) => <Warehouse z={z} />],
+  ["Sandboxed warehouse", "SQL can't read files or the network", "#b3a8ff", (z) => <Warehouse z={z} />],
   ["Masking", "Originals never reach the disk", "#f0c14b", (z) => <Masking z={z} />],
   ["Read-only sources", "No session can write back", "#fff", (z) => <Sources z={z} />],
 ];
@@ -59,12 +59,12 @@ const LAYERS: [string, string, string, (z: number) => React.ReactNode][] = [
 /** Same world coordinates as the hero; the viewBox frames this scene. */
 export default function SecurityIso() {
   return (
-    <svg className="lp-stack" viewBox="190 -372 690 752" role="img" aria-label="Four layers protect your data. Read-only sources, masking that keeps originals off the disk, a sandboxed warehouse, and roles with an audit trail.">
+    <svg className="lp-stack" viewBox="190 -372 760 752" role="img" aria-label="Four layers protect your data. Read-only sources, masking that keeps originals off the disk, a sandboxed warehouse, and roles with an audit trail.">
       <defs>
         <Grad id="s-d-t" stops={["#34443f", "#171f1d"]} /><Grad id="s-d-l" stops={["#10171a", "#090d0d"]} /><Grad id="s-d-r" stops={["#1a2422", "#0e1413"]} />
         <Grad id="s-k-t" stops={["#4a5e59", "#2b3835"]} /><Grad id="s-k-r" stops={["#2a3734", "#182120"]} /><Grad id="s-c-k" across stops={["#1a2422", "#55695f", "#2b3835", "#121918"]} />
         <Grad id="s-g-t" stops={["rgba(190,214,252,.5)", "rgba(100,150,240,.14)"]} /><Grad id="s-g-l" stops={["rgba(143,178,238,.34)", "rgba(79,140,240,.06)"]} /><Grad id="s-g-r" stops={["rgba(190,214,252,.42)", "rgba(79,140,240,.1)"]} />
-        <Grad id="s-b-t" stops={["#5a92f4", "#1f5fe0"]} /><Grad id="s-b-l" stops={["#123a86", "#0c2a63"]} /><Grad id="s-b-r" stops={["#2460cf", "#153f95"]} /><Grad id="s-c-b" across stops={["#10357c", "#4a84f0", "#1f56c4", "#0d2c68"]} />
+        <Grad id="s-b-t" stops={["#7a66ff", "#4124fb"]} /><Grad id="s-b-l" stops={["#241490", "#190d6b"]} /><Grad id="s-b-r" stops={["#3a20d8", "#28169c"]} /><Grad id="s-c-b" across stops={["#1f1180", "#4a84f0", "#3a20d8", "#170c66"]} />
         <Grad id="s-m-t" stops={["#46391a", "#201a0c"]} /><Grad id="s-m-l" stops={["#17120a", "#0d0a05"]} /><Grad id="s-m-r" stops={["#2a2110", "#171208"]} />
         <Grad id="s-a-t" stops={["#8bf3e1", "#3fd6bf"]} /><Grad id="s-a-l" stops={["#14796d", "#0c5a50"]} /><Grad id="s-a-r" stops={["#1da08f", "#137a6c"]} /><Grad id="s-c-a" across stops={["#0f6b60", "#62e8d2", "#1da08f", "#0b534a"]} />
         <filter id="s-soft" x="-40%" y="-70%" width="180%" height="240%"><feGaussianBlur stdDeviation="20" /></filter>

@@ -22,6 +22,20 @@ const settle = (delay: number) => ({ initial: { opacity: 0.6, y: 10 }, animate: 
 const FADE = { initial: { opacity: 0, y: -8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 } };
 const PANEL = { enter: (d: number) => ({ opacity: 0, x: d * 24 }), on: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: d * -24 }) };
 
+const REVEAL = ".lp-pad > :first-child, .lp-logos li, .lp-bento > li, .lp-solutions > li, .lp-signals > li, .lp-secure > div, .lp-steps article > div:first-child, .lp-speed dl > div, .lp-table, .lp-fit > div, .lp-close > *";
+/** Each part fades up as it arrives, neighbours slightly after one another. Done by class rather than per element in React, so scrolling never re-renders the page. */
+function useReveal() {
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (reduce || typeof IntersectionObserver === "undefined") return;
+    const list = [...document.querySelectorAll<HTMLElement>(REVEAL)];
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("lp-in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -6% 0px", threshold: 0.05 });
+    list.forEach((el) => { el.classList.add("lp-rv"); el.style.setProperty("--rv", `${Math.min([...el.parentElement!.children].indexOf(el), 5) * 60}ms`); io.observe(el); });
+    document.documentElement.classList.add("lp-js");
+    return () => { io.disconnect(); document.documentElement.classList.remove("lp-js"); };
+  }, [reduce]);
+}
+
 function Drift({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
@@ -50,7 +64,7 @@ const MENUS: Menu[] = [
       { icon: "shield", name: "Personal data", line: "Mask sensitive columns before anything is stored", href: "#protect" },
       { icon: "model", name: "Transformations", line: "SQL, Python, dbt-style models or a no-code editor", href: "#transform" },
     ] },
-    { title: "Find and share answers", color: "#1457d2", items: [
+    { title: "Find and share answers", color: "#4124fb", items: [
       { icon: "table", name: "Data views", line: "Grid, board, gallery and pivot views over any table", href: "#explore" },
       { icon: "code", name: "SQL editor and catalog", line: "Query anything and see what each column holds", href: "#explore" },
       { icon: "dashboard", name: "Dashboards and apps", line: "Visuals, DAX measures and published apps", href: "#report" },
@@ -79,7 +93,7 @@ const MENUS: Menu[] = [
     { icon: "code", name: "Sandboxed SQL", line: "Queries can't read files or reach the network", href: "#security" },
     { icon: "key", name: "Encrypted passwords", line: "Connection passwords are encrypted at rest", href: "#security" },
   ] }], aside: { title: "Every layer, explained", body: "See how read-only sources, masking, the sandbox and roles work together.", cta: "See the security layers", href: "#security" } },
-  { label: "Resources", groups: [{ title: "Get started and compare", color: "#1457d2", items: [
+  { label: "Resources", groups: [{ title: "Get started and compare", color: "#4124fb", items: [
     { icon: "flow", name: "How it works", line: "From connecting a source to sharing a report", href: "#how" },
     { icon: "table", name: "Compare", line: "What it replaces, and when it isn't a good fit", href: "#compare" },
     { icon: "clock", name: "Speed", line: "Measured results with the sample company", href: "#speed" },
@@ -152,7 +166,7 @@ function Flow() {
   return (
     <div className="lp-flow">
       <nav aria-label="Steps"><ol>{STEPS.map((s) => <li key={s.id}>{active === s.id && <m.span layoutId="lp-step-bar" className="lp-step-bar" />}<a href={`#${s.id}`} aria-current={active === s.id ? "step" : undefined}>{s.nav}</a></li>)}</ol></nav>
-      <div className="lp-steps">{STEPS.map((s) => <article id={s.id} key={s.id}><div><h3>{s.title} <span>{s.muted}</span></h3><p>{s.body}</p></div><m.div className="lp-proof-slot" initial={{ opacity: 1, y: 0 }} animate={{ opacity: active === s.id ? 1 : 0.72, y: active === s.id ? 0 : 8 }}>{s.proof()}</m.div></article>)}</div>
+      <div className="lp-steps">{STEPS.map((s) => <article id={s.id} key={s.id}><div><h3>{s.title} <span>{s.muted}</span></h3><p>{s.body}</p></div><m.div className={`lp-proof-slot${active === s.id ? " on" : ""}`} initial={{ y: 0 }} animate={{ y: active === s.id ? 0 : 8 }}>{s.proof()}</m.div></article>)}</div>
     </div>
   );
 }
@@ -174,7 +188,7 @@ function IsoBars() {
   return (
     <svg className="lp-iso" viewBox="0 0 560 470" aria-hidden="true">
       <path d="M40 240 330 440 530 320 240 120z" fill="none" stroke="var(--line)" />
-      {heights.map((h, i) => { const x = 70 + i * 40, y = 225 + i * 27, hi = i === heights.length - 1; const f = hi ? "#e2ebfb" : "#fff", s = hi ? "#1457d2" : "#b5bcc7"; return <g key={i} stroke={s} strokeLinejoin="round">
+      {heights.map((h, i) => { const x = 70 + i * 40, y = 225 + i * 27, hi = i === heights.length - 1; const f = hi ? "#e2ebfb" : "#fff", s = hi ? "#4124fb" : "#b5bcc7"; return <g key={i} stroke={s} strokeLinejoin="round">
         <path d={`M${x} ${y}V${y - h}l30 18v${h}z`} fill={hi ? "#d3e0f8" : "#eef0f3"} /><path d={`M${x + 30} ${y + 18}V${y - h + 18}l30 -18v${h}z`} fill={f} /><path d={`M${x} ${y - h}l30 18 30-18-30-18z`} fill={hi ? "#c0d3f5" : "#f7f8f9"} />
       </g>; })}
     </svg>
@@ -262,11 +276,11 @@ export function Nav({ base = "" }: { base?: string }) {
 const CARDS: { title: string; body: string; proof: ReactNode }[] = [
   { title: "Three ways to transform", body: "Analysts use no-code steps, engineers write SQL, and admins add Python when a job needs it. All three share one dependency graph.", proof: <div className="lp-list">{[["mart_customer_value", "No-code steps"], ["dim_customers", "SQL"], ["customer_segments", "Python"]].map(([a, b]) => <div key={a}><code>{a}</code><Pill tone="blue">{b}</Pill></div>)}</div> },
   { title: "A check after every run", body: "Row counts are compared after each sync. Models can require unique, filled and allowed values, and any failure shows on the run.", proof: <div className="lp-list">{[["customers", "6,500 rows", "Match", "good"], ["orders", "152,185 rows", "Match", "good"], ["tickets", "22 rows behind", "Review", "warn"]].map(([a, b, c, t]) => <div key={a}><span><code>{a}</code><small>{b}</small></span><Pill tone={t as "good" | "warn"}>{c}</Pill></div>)}</div> },
-  { title: "Roles that hold", body: "Admin, Editor and Viewer are enforced on the server, not only hidden in the interface.", proof: <div className="lp-list">{[["Viewer", "Read-only SQL"], ["Editor", "Models and pipelines"], ["Admin", "Members and Python"]].map(([a, b]) => <div key={a}><b>{a}</b><small>{b}</small></div>)}</div> },
+  { title: "Who gets in, and what they see", body: "Your identity provider or a second factor at sign-in, limits on how long a session lasts, and roles enforced on the server.", proof: <div className="lp-list">{[["Single sign-on", "OpenID Connect"], ["Two-factor sign-in", "Authenticator apps"], ["Session limits", "Idle and maximum"]].map(([a, b]) => <div key={a}><b>{a}</b><small>{b}</small></div>)}</div> },
   { title: "An audit trail", body: "Sign-ins, rule changes and access changes are recorded, and you can export them.", proof: <div className="lp-list">{[["Changed personal data rule", "customers.phone"], ["Added member", "as Viewer"], ["Ran sync", "7 tables"]].map(([a, b]) => <div key={a}><b>{a}</b><small>{b}</small></div>)}</div> },
   { title: "Standard formats", body: "Builds save files shaped like dbt's manifest and run results, and syncs log Airbyte-style messages.", proof: <div className="lp-list">{["manifest.json", "run_results.json", "OpenLineage event"].map((a) => <div key={a}><code>{a}</code><Icon name="check" size={15} /></div>)}</div> },
 ];
-const SIGNALS: [IconName, string, string][] = [["plug", "Read-only sources.", "Sessions open read-only."], ["shield", "Masked first.", "Rules run before storage."], ["code", "Sandboxed SQL.", "No file or network access."], ["key", "Encrypted passwords.", "AES-256-GCM at rest."], ["people", "Roles enforced.", "Checked on every API call."]];
+const SIGNALS: [IconName, string, string][] = [["plug", "Read-only sources.", "Sessions open read-only."], ["shield", "Masked first.", "Rules run before storage."], ["code", "Sandboxed SQL.", "No file or network access."], ["key", "Encrypted secrets.", "AES-256-GCM at rest."], ["people", "Two-factor sign-in.", "Required by your admin if you choose."]];
 const JOBS: [string, string, string][] = [["Copy data out of your databases", "Airbyte, Fivetran", "Pipelines and connectors"], ["Clean and join it", "dbt, Power Query", "Models and query editor"], ["Store it and query it", "Snowflake, Databricks SQL", "DuckDB warehouse and SQL editor"], ["Edit it like a spreadsheet", "Airtable", "Bases and data views"], ["Report on it", "Power BI, Metabase", "Semantic model, dashboards and apps"]];
 const STATS: [string, string][] = [["2.1 s", "To sync and mask the sample company"], ["222,740", "Rows copied in that sync"], ["0.2 s", "To build 13 models and run their checks"], ["144 ms", "Typical delay for a PostgreSQL change to be queryable, at 10,000 changes a second"]];
 const FOOT: [string, [string, string][]][] = [
@@ -276,9 +290,12 @@ const FOOT: [string, [string, string][]][] = [
   ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"]]],
 ];
 
+function Reveal() { useReveal(); return null; }
+
 export default function Landing() {
   return (
     <Motion><div className="lp">
+      <Reveal />
       <Nav />
       <section className="lp-hero">
         <div className="lp-contour" aria-hidden="true"><ContourField /></div>
@@ -337,7 +354,7 @@ export default function Landing() {
         <Head tag={{ icon: "table", label: "Compare" }} title="Five subscriptions, or one workspace." muted="It covers the core of each job." />
         <div className="lp-table"><table><thead><tr><th>The job</th><th>Usually done with</th><th>In Basalt</th></tr></thead><tbody>{JOBS.map(([a, b, c]) => <tr key={a}><td data-l="The job">{a}</td><td data-l="Usually done with">{b}</td><td data-l="In Basalt"><b>{c}</b></td></tr>)}</tbody></table></div>
         <div className="lp-fit">
-          <div><h3>A good fit</h3><ul><li><Icon name="check" />Your data lives in PostgreSQL, MySQL, MariaDB, cloud storage or files</li><li><Icon name="check" />You have a small team and want one tool, not five</li><li><Icon name="check" />Personal data has to be masked before it&apos;s stored</li></ul></div>
+          <div><h3>A good fit</h3><ul><li><Icon name="check" />Your data lives in PostgreSQL, MySQL, MariaDB, cloud storage or files</li><li><Icon name="check" />You want one tool with one set of permissions, not five</li><li><Icon name="check" />Personal data has to be masked before it&apos;s stored</li></ul></div>
           <div><h3>Not a good fit yet</h3><ul><li><Icon name="x" />Data too large for one warehouse</li><li><Icon name="x" />You need live sync from Kafka or MySQL</li><li><Icon name="x" />Many teams write heavily at the same time</li></ul></div>
         </div>
       </div></div></section>
@@ -351,7 +368,7 @@ export default function Landing() {
       </div></div></section>
 
       <footer className="lp-foot"><div className="lp-wrap">
-        <div className="lp-foot-top"><div><span className="lp-brand"><Mark size={28} />Basalt</span><p>Data sync, transformations, bases, dashboards and apps for growing companies.</p></div>
+        <div className="lp-foot-top"><div><span className="lp-brand"><Mark size={28} />Basalt</span><p>Data sync, transformations, bases, dashboards and apps for companies.</p></div>
           <nav aria-label="Footer">{FOOT.map(([h, links]) => <div key={h}><h3>{h}</h3><ul>{links.map(([l, href]) => <li key={l}>{href.startsWith("/") ? <MLink {...PRESS} href={href}>{l}</MLink> : <m.a {...PRESS} href={href}>{l}</m.a>}</li>)}</ul></div>)}</nav></div>
         <div className="lp-foot-end"><small>&copy; {new Date().getFullYear()} Basalt. Product names and logos belong to their owners and don&apos;t imply endorsement.</small><m.a {...PRESS} href="#top" onClick={(e) => { e.preventDefault(); scrollTo({ top: 0, behavior: "smooth" }); }}>Back to top</m.a></div>
       </div></footer>

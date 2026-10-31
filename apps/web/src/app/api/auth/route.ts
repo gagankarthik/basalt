@@ -4,6 +4,8 @@ import { createThrottle } from "@/lib/loginThrottle";
 import { sampleConfig } from "@/server/seed";
 import { runPipeline } from "@/server/jobs";
 import { getSso } from "@/server/sso";
+import { beginMfa, checkSecondFactor, confirmMfa, newCodes, removeMfa } from "@/server/mfa";
+import { getSecurity } from "@/server/security";
 
 const throttle = createThrottle();
 const secure = (req: Request) => new URL(req.url).protocol === "https:" || req.headers.get("x-forwarded-proto") === "https";
@@ -46,9 +48,43 @@ export async function POST(req: Request) {
     }
     // Admins keep password access so a provider outage can't lock everyone out
     if (sso.enabled && sso.enforce && user.role !== "admin") throw new HttpError(403, `Use ${sso.name} to sign in.`);
+    const code = String(b.code ?? "");
+    const wrongCode = () => { throttle.fail(email, sender); return new HttpError(401, "That code isn't right. Check your authenticator app and try again."); };
+    // The password is checked above on every one of these, so no half-signed-in session ever exists for someone to get past
+    if (b.action === "mfa-begin") {
+      if (user.mfa) throw new HttpError(400, "Two-factor sign-in is already on.");
+      return Response.json(await beginMfa(user));
+    }
+    if (b.action === "mfa-confirm") {
+      if (user.mfa) throw new HttpError(400, "Two-factor sign-in is already on.");
+      const recovery = confirmMfa(user, code);
+      if (!recovery) throw wrongCode();
+      throttle.clear(email, sender);
+      audit(user.name, "Turned on two-factor sign-in", "", true);
+      const fresh = getUsers().find((u) => u.id === user.id)!;
+      return Response.json({ recovery, user: publicUser(fresh) }, { headers: { "Set-Cookie": sessionCookie(fresh, secure(req)) } });
+    }
+    if (b.action === "mfa-off" || b.action === "mfa-codes") {
+      if (!user.mfa) throw new HttpError(400, "Two-factor sign-in isn't on.");
+      // Refused before the code is checked, so a refusal doesn't use up a recovery code
+      if (b.action === "mfa-off" && getSecurity().requireMfa) throw new HttpError(403, "Your workspace requires two-factor sign-in, so it can't be turned off.");
+      if (!checkSecondFactor(user, code)) throw wrongCode();
+      throttle.clear(email, sender);
+      if (b.action === "mfa-codes") { audit(user.name, "Made new recovery codes", "", true); return Response.json({ recovery: newCodes(user) }); }
+      removeMfa(user.id);
+      audit(user.name, "Turned off two-factor sign-in", "", true);
+      return Response.json({ ok: true }, { headers: { "Set-Cookie": sessionCookie(getUsers().find((u) => u.id === user.id)!, secure(req)) } });
+    }
+    if (user.mfa) {
+      if (!code) return Response.json({ mfaRequired: true });
+      const how = checkSecondFactor(user, code);
+      if (!how) throw wrongCode();
+      if (how === "recovery") audit(user.name, "Signed in with a recovery code", `${user.mfa.recovery.length - 1} left`, true);
+    } else if (getSecurity().requireMfa) return Response.json({ mustEnrol: true });
     throttle.clear(email, sender);
     audit(user.name, "Signed in");
-    return Response.json({ user: publicUser(user) }, { headers: { "Set-Cookie": sessionCookie(user, secure(req)) } });
+    // Read again, because using a recovery code changed how many are left
+    return Response.json({ user: publicUser(getUsers().find((u) => u.id === user.id)!) }, { headers: { "Set-Cookie": sessionCookie(user, secure(req)) } });
   } catch (e) {
     return errorResponse(e);
   }

@@ -1,4 +1,5 @@
 import "server-only";
+import { rotateAudit } from "@/lib/hosted";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { DATA_DIR, dataPath } from "./engine";
@@ -27,16 +28,20 @@ export function saveRun(run: Run) {
 export const getStreamState = () => readJson<Record<string, Record<string, string>>>("stream-state.json", {});
 export const saveStreamState = (s: Record<string, Record<string, string>>) => writeJson("stream-state.json", s);
 
+export const AUDIT_ARCHIVE = "audit-archive.jsonl";
 export const getAudit = () => readJson<AuditEntry[]>("audit.json", []);
 export function audit(actor: string, action: string, detail = "", sensitive = false) {
-  writeJson("audit.json", [{ id: crypto.randomUUID(), at: new Date().toISOString(), actor, action, detail, sensitive }, ...getAudit()].slice(0, 5000));
+  const { recent, archive } = rotateAudit([{ id: crypto.randomUUID(), at: new Date().toISOString(), actor, action, detail, sensitive }, ...getAudit()], 5000);
+  // Archived before the shorter list is saved, so a crash between the two can only repeat an entry, never lose one
+  if (archive.length) fs.appendFileSync(dataPath(AUDIT_ARCHIVE), archive.map((a) => JSON.stringify(a)).join("\n") + "\n", { mode: 0o600 });
+  writeJson("audit.json", recent);
 }
 
 export const getSalesRequests = () => readJson<SalesRequest[]>("sales-requests.json", []);
 export const saveSalesRequest = (r: SalesRequest) => writeJson("sales-requests.json", [r, ...getSalesRequests()].slice(0, 5000));
 
 /* ---- users ---- */
-export type StoredUser = Member & { salt: string; hash: string; sessions?: number; ssoId?: string };
+export type StoredUser = Member & { salt: string; hash: string; sessions?: number; ssoId?: string; mfa?: { lastStep: number; recovery: string[]; enabledAt: string } };
 export type Revoked = { userId: string; table: string };
 export const getRevoked = () => readJson<Revoked[]>("revoked.json", []);
 export const saveRevoked = (r: Revoked[]) => writeJson("revoked.json", r);
@@ -44,7 +49,7 @@ export const getRls = () => readJson<RlsRule[]>("rls.json", []);
 export const saveRls = (r: RlsRule[]) => writeJson("rls.json", r);
 export const getUsers = () => readJson<StoredUser[]>("users.json", []);
 export const saveUsers = (u: StoredUser[]) => writeJson("users.json", u);
-export const publicUser = (u: StoredUser): Member => ({ id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt });
+export const publicUser = (u: StoredUser): Member => ({ id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt, ...(u.mfa ? { mfaOn: true, mfaCodesLeft: u.mfa.recovery.length } : {}) });
 export function hashPassword(pw: string, salt = crypto.randomBytes(16).toString("hex")) {
   return { salt, hash: crypto.scryptSync(pw, salt, 64).toString("hex") };
 }

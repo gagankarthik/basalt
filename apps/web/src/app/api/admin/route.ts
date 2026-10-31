@@ -1,4 +1,7 @@
 import { api, HttpError } from "@/server/auth";
+import { removeMfa, signOutWithoutMfa } from "@/server/mfa";
+import { getSecurity, saveSecurity } from "@/server/security";
+import { validPolicy } from "@/lib/sessionPolicy";
 import { audit, createUser, getAudit, getConfig, saveConfig, getRls, getSalesRequests, getSecret, getUsers, publicUser, saveRls, saveSecret, saveUsers } from "@/server/files";
 import { canLoadSample } from "@/lib/onboarding";
 import { runPipeline } from "@/server/jobs";
@@ -8,10 +11,37 @@ import type { Role } from "@/lib/types";
 
 const ROLES: Role[] = ["admin", "editor", "viewer"];
 
-export const GET = api("admin", () => ({ members: getUsers().map(publicUser), audit: getAudit().slice(0, 1000), sales: getSalesRequests(), rls: getRls(), sso: { ...getSso(), hasSecret: !!getSecret("sso") } }));
+export const GET = api("admin", () => ({ members: getUsers().map(publicUser), audit: getAudit().slice(0, 1000), sales: getSalesRequests(), rls: getRls(), security: getSecurity(), sso: { ...getSso(), hasSecret: !!getSecret("sso") } }));
 
 export const POST = api("admin", async (req, user) => {
   const b = await req.json();
+  if (b.action === "security") {
+    const was = getSecurity(), next = { ...was, ...(b.requireMfa !== undefined ? { requireMfa: !!b.requireMfa } : {}), ...(b.idleMinutes !== undefined ? { idleMinutes: Number(b.idleMinutes) } : {}), ...(b.maxHours !== undefined ? { maxHours: Number(b.maxHours) } : {}) };
+    if (!validPolicy(next)) throw new HttpError(400, "Choose one of the options offered.");
+    if (next.requireMfa && !was.requireMfa && !user.mfa) throw new HttpError(400, "Turn on two-factor sign-in for your own account first, under Your account, so you can't be locked out.");
+    saveSecurity(next);
+    // Anyone without it signs in again, and is asked to set it up then
+    if (next.requireMfa && !was.requireMfa) signOutWithoutMfa();
+    if (next.requireMfa !== was.requireMfa) audit(user.name, next.requireMfa ? "Required two-factor sign-in for everyone" : "Stopped requiring two-factor sign-in", "", true);
+    if (next.idleMinutes !== was.idleMinutes || next.maxHours !== was.maxHours) audit(user.name, "Changed session limits", `Idle ${next.idleMinutes || "never"} minutes, longest ${next.maxHours} hours`, true);
+    return { ok: true };
+  }
+  if (b.action === "end-sessions") {
+    // Everyone but the admin asking, or one person. Raising the number ends every copy of their cookie
+    const one = b.id ? getUsers().find((u) => u.id === String(b.id)) : null;
+    if (b.id && !one) throw new HttpError(404, "This member no longer exists.");
+    saveUsers(getUsers().map((u) => ((one ? u.id === one.id : u.id !== user.id) ? { ...u, sessions: (u.sessions ?? 0) + 1 } : u)));
+    audit(user.name, one ? "Signed a member out" : "Signed everyone else out", one?.name ?? "", true);
+    return { ok: true };
+  }
+  if (b.action === "mfa-reset") {
+    if (String(b.id) === user.id) throw new HttpError(400, "Change your own under Your account.");
+    const who = getUsers().find((u) => u.id === String(b.id));
+    if (!who) throw new HttpError(404, "This member no longer exists.");
+    removeMfa(who.id);
+    audit(user.name, "Reset two-factor sign-in", who.name, true);
+    return { ok: true };
+  }
   if (b.action === "sample") {
     const cfg = getConfig();
     if (!canLoadSample(cfg)) throw new HttpError(400, "The sample company can only load into an empty workspace.");
