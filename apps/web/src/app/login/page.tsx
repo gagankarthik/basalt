@@ -34,9 +34,9 @@ export default function Login() {
     } catch (err) { setError((err as Error).message); setBusy(false); }
   };
   if (setup === null) return <div className="auth" />;
-  if (step === "enrol") return <div className="auth"><div className="auth-card"><div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 700, fontSize: 18 }}><Mark size={26} />Basalt</div><p className="small muted">Your workspace requires two-factor sign-in.</p><MfaSetup email={f.email} password={f.password} onDone={() => window.location.assign(nextPath())} /></div></div>;
+  if (step === "enrol") return <div className="auth"><div className="auth-card"><div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 500, fontSize: 18 }}><Mark size={26} />Basalt</div><p className="small muted">Your workspace requires two-factor sign-in.</p><MfaSetup email={f.email} password={f.password} onDone={() => window.location.assign(nextPath())} /></div></div>;
   if (step === "code") return <div className="auth"><form onSubmit={submit} noValidate>
-    <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 700, fontSize: 18 }}><Mark size={26} />Basalt</div>
+    <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 500, fontSize: 18 }}><Mark size={26} />Basalt</div>
     <div><h1>Enter your code</h1><p className="muted">From your authenticator app, or one of your recovery codes.</p></div>
     <Field label="Code"><input className="input" autoFocus autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} /></Field>
     {error && <div className="banner bad" role="alert">{error}</div>}
@@ -46,7 +46,7 @@ export default function Login() {
   return (
     <div className="auth">
       <form onSubmit={submit} noValidate>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 700, fontSize: 18 }}><Mark size={26} />Basalt</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", fontWeight: 500, fontSize: 18 }}><Mark size={26} />Basalt</div>
         <div><h1>{setup ? "Set up your workspace" : "Sign in"}</h1>{setup && <p className="muted">You&apos;ll be the admin. Everything stays on this server.</p>}</div>
         {!setup && sso && <><a className="btn primary" style={{ justifyContent: "center" }} href="/api/auth/sso">Continue with {sso.name}</a><div className="sso-or">{sso.enforce ? "Admins can also use a password" : "or"}</div></>}
         {setup && <Field label="Company or workspace name" error={show("workspace")}><input className="input" required value={f.workspace} onChange={on("workspace")} /></Field>}

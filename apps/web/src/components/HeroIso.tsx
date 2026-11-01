@@ -130,7 +130,7 @@ export default function HeroIso() {
         <path d={`M${sx} ${sy + 58}V${top - 2}`} stroke={c} strokeWidth="1.500" /><circle cx={sx} cy={sy + 58} r="2.500" fill={c} />
         <text x={sx} y={top + 16} textAnchor="middle">{a}</text><text className="sub" x={sx} y={top + 37} textAnchor="middle">{b}</text>
       </g>; })}
-      {(() => { const top = P(...at(0))[1] + 72; return <g><text x={112} y={top + 16} textAnchor="middle">Your databases</text><text className="sub" x={112} y={top + 37} textAnchor="middle">Read-only</text></g>; })()}
+      {(() => { const top = P(...at(0))[1] + 72; return <g><text x={214} y={top + 16} textAnchor="middle">Your databases</text><text className="sub" x={214} y={top + 37} textAnchor="middle">Read-only</text></g>; })()}
     </svg>
   );
 }

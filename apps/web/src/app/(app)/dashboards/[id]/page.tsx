@@ -136,7 +136,7 @@ function Board({ id }: { id: string }) {
   return (
     <div className="fill" style={{ flexDirection: "row" }}>
       <div style={{ flex: 1, minWidth: 0, overflow: "auto" }} className={`report-scroll ${edit ? "editing" : ""}`} key={refreshKey}>
-        <header className="page-head"><div>{edit ? <input className="input" aria-label="Dashboard name" style={{ fontWeight: 600, width: "min(420px, 100%)" }} value={d.name} onChange={(e) => upD({ name: e.target.value })} /> : <h1>{d.name}</h1>}</div>
+        <header className="page-head"><div>{edit ? <input className="input" aria-label="Dashboard name" style={{ fontWeight: 500, width: "min(420px, 100%)" }} value={d.name} onChange={(e) => upD({ name: e.target.value })} /> : <h1>{d.name}</h1>}</div>
           <div className="actions">
             <LiveControl />
             <Btn icon="search" onClick={() => setAsking(true)}>Ask</Btn>

@@ -23,7 +23,7 @@ function dateLabel(v: unknown, grain?: Widget["dateGrain"]) {
 
 export function buildOption(w: Widget, r: Result, f: (v: unknown) => string): echarts.EChartsOption {
   const ink = cssVar("--ink-2"), line = cssVar("--line"), accent = w.palette?.[0] ?? (isDark() ? lift(cssVar("--accent")) : cssVar("--accent")), font = cssVar("--ui").split(",")[0];
-  const axis = { axisLine: { lineStyle: { color: line } }, axisTick: { show: false }, axisLabel: { color: ink, fontSize: 11, hideOverlap: true }, splitLine: { lineStyle: { color: line } } };
+  const axis = { axisLine: { lineStyle: { color: line } }, axisTick: { show: false }, axisLabel: { color: ink, fontSize: 12, hideOverlap: true }, splitLine: { lineStyle: { color: line } } };
   const legendOn = w.showLegend !== false;
   const base: echarts.EChartsOption = {
     color: w.palette ?? (isDark() ? DARK : LIGHT), animationDuration: 200, textStyle: { fontFamily: font, color: ink },
@@ -32,7 +32,7 @@ export function buildOption(w: Widget, r: Result, f: (v: unknown) => string): ec
   };
   const single = (w.measures.length === 1 && !w.series);
   const dims = r.rows.map((x) => dateLabel(x.d, w.dateGrain));
-  const label = { show: !!w.showLabels, formatter: (p: { value: unknown }) => f(Array.isArray(p.value) ? p.value[p.value.length - 1] : p.value), fontSize: 11, color: ink };
+  const label = { show: !!w.showLabels, formatter: (p: { value: unknown }) => f(Array.isArray(p.value) ? p.value[p.value.length - 1] : p.value), fontSize: 12, color: ink };
 
   const seriesOf = (type: "bar" | "line", extra: object = {}) => {
     if (w.series) {
@@ -42,7 +42,7 @@ export function buildOption(w: Widget, r: Result, f: (v: unknown) => string): ec
     }
     return { xs: dims, list: w.measures.map((m, i) => ({ name: measureLabel(m), type, data: r.rows.map((x) => x[`m${i}`]), label, ...(single ? { itemStyle: { color: accent }, lineStyle: { color: accent } } : {}), ...extra })) };
   };
-  const legend = (n: number) => (legendOn && n > 1 ? { legend: { top: 0, textStyle: { color: ink, fontSize: 11 }, icon: "roundRect", itemWidth: 10, itemHeight: 10 }, grid: { left: 8, right: 16, top: 28, bottom: 8, containLabel: true } } : {});
+  const legend = (n: number) => (legendOn && n > 1 ? { legend: { top: 0, textStyle: { color: ink, fontSize: 12 }, icon: "roundRect", itemWidth: 10, itemHeight: 10 }, grid: { left: 8, right: 16, top: 28, bottom: 8, containLabel: true } } : {});
   const valAxis = { type: "value" as const, ...axis, axisLabel: { ...axis.axisLabel, formatter: (v: number) => (Math.abs(v) >= 10000 && (!w.format || w.format === "number") ? new Intl.NumberFormat("en-US", { notation: "compact" }).format(v) : f(v)) } };
   const catAxis = (data: string[]) => ({ type: "category" as const, data, ...axis, splitLine: { show: false } });
   const barItem = { borderRadius: [3, 3, 0, 0] as [number, number, number, number] };
@@ -65,23 +65,23 @@ export function buildOption(w: Widget, r: Result, f: (v: unknown) => string): ec
       return { ...base, ...legend(list.length), xAxis: catAxis(dims), yAxis: valAxis, series: list as never };
     }
     case "pie": case "donut": {
-      return { ...base, tooltip: { ...base.tooltip, trigger: "item" }, legend: legendOn ? { type: "scroll", orient: "horizontal", bottom: 0, textStyle: { color: ink, fontSize: 11 }, itemWidth: 10, itemHeight: 10 } : undefined,
-        series: [{ type: "pie", radius: w.type === "donut" ? ["48%", "72%"] : "72%", center: ["50%", "45%"], avoidLabelOverlap: true, itemStyle: { borderColor: cssVar("--bg"), borderWidth: 2 }, label: { show: !!w.showLabels, color: ink, fontSize: 11 }, data: r.rows.map((x, i) => ({ name: dims[i], value: Number(x.m0) })) }] };
+      return { ...base, tooltip: { ...base.tooltip, trigger: "item" }, legend: legendOn ? { type: "scroll", orient: "horizontal", bottom: 0, textStyle: { color: ink, fontSize: 12 }, itemWidth: 10, itemHeight: 10 } : undefined,
+        series: [{ type: "pie", radius: w.type === "donut" ? ["48%", "72%"] : "72%", center: ["50%", "45%"], avoidLabelOverlap: true, itemStyle: { borderColor: cssVar("--bg"), borderWidth: 2 }, label: { show: !!w.showLabels, color: ink, fontSize: 12 }, data: r.rows.map((x, i) => ({ name: dims[i], value: Number(x.m0) })) }] };
     }
     case "treemap":
       return { ...base, tooltip: { ...base.tooltip, trigger: "item" }, series: [{ type: "treemap", roam: false, nodeClick: false, breadcrumb: { show: false }, left: 0, right: 0, top: 0, bottom: 0, itemStyle: { borderColor: cssVar("--bg"), borderWidth: 2 }, label: { show: true, formatter: "{b}", fontSize: 12, color: "#fff" }, data: r.rows.map((x, i) => ({ name: dims[i], value: Number(x.m0) })) }] };
     case "funnel":
-      return { ...base, tooltip: { ...base.tooltip, trigger: "item" }, series: [{ type: "funnel", left: 8, right: 8, top: 4, bottom: 4, sort: "descending", gap: 2, itemStyle: { borderWidth: 0 }, label: { color: ink, position: "right", fontSize: 11 }, labelLine: { show: false }, data: r.rows.map((x, i) => ({ name: dims[i], value: Number(x.m0) })) }] };
+      return { ...base, tooltip: { ...base.tooltip, trigger: "item" }, series: [{ type: "funnel", left: 8, right: 8, top: 4, bottom: 4, sort: "descending", gap: 2, itemStyle: { borderWidth: 0 }, label: { color: ink, position: "right", fontSize: 12 }, labelLine: { show: false }, data: r.rows.map((x, i) => ({ name: dims[i], value: Number(x.m0) })) }] };
     case "gauge": {
       const v = Number(r.rows[0]?.m0 ?? 0);
-      return { ...base, series: [{ type: "gauge", min: 0, max: w.target || Math.max(100, v), radius: "95%", center: ["50%", "62%"], startAngle: 200, endAngle: -20, progress: { show: true, width: 10, itemStyle: { color: accent } }, axisLine: { lineStyle: { width: 10, color: [[1, line]] } }, pointer: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false }, detail: { valueAnimation: false, formatter: (x: number) => f(x), color: cssVar("--ink"), fontSize: 22, fontWeight: 600, offsetCenter: [0, "10%"] }, data: [{ value: v }] }] };
+      return { ...base, series: [{ type: "gauge", min: 0, max: w.target || Math.max(100, v), radius: "95%", center: ["50%", "62%"], startAngle: 200, endAngle: -20, progress: { show: true, width: 10, itemStyle: { color: accent } }, axisLine: { lineStyle: { width: 10, color: [[1, line]] } }, pointer: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false }, detail: { valueAnimation: false, formatter: (x: number) => f(x), color: cssVar("--ink"), fontSize: 22, fontWeight: 500, offsetCenter: [0, "10%"] }, data: [{ value: v }] }] };
     }
     case "heatmap": {
       const xs = [...new Set(dims)], ys = [...new Set(r.rows.map((x) => String(x.s ?? "(empty)")))];
       const vals = r.rows.map((x) => Number(x.m0));
       return { ...base, tooltip: { ...base.tooltip, trigger: "item", formatter: (p) => { const a = (p as { value: number[] }).value; return `${xs[a[0]]}, ${ys[a[1]]}: ${f(a[2])}`; } }, grid: { left: 8, right: 8, top: 8, bottom: 34, containLabel: true }, xAxis: { ...catAxis(xs), splitArea: { show: false } }, yAxis: catAxis(ys),
-        visualMap: { min: Math.min(...vals), max: Math.max(...vals), calculable: false, orient: "horizontal", left: "center", bottom: 0, itemHeight: 90, itemWidth: 10, textStyle: { color: ink, fontSize: 11 }, formatter: (v) => f(v), inRange: { color: [cssVar("--bg-3"), accent] } },
-        series: [{ type: "heatmap", data: r.rows.map((x, i) => [xs.indexOf(dims[i]), ys.indexOf(String(x.s ?? "(empty)")), Number(x.m0)]), itemStyle: { borderColor: cssVar("--bg"), borderWidth: 2 }, label: { show: true, formatter: (p) => { const v = (p.value as number[])[2], hi = Math.max(...vals), lo = Math.min(...vals); return `{${hi > lo && (v - lo) / (hi - lo) > 0.45 ? "on" : "off"}|${f(v)}}`; }, rich: { on: { color: isDark() ? "#0e1724" : "#fff", fontSize: 11 }, off: { color: cssVar("--ink"), fontSize: 11 } } } }] };
+        visualMap: { min: Math.min(...vals), max: Math.max(...vals), calculable: false, orient: "horizontal", left: "center", bottom: 0, itemHeight: 90, itemWidth: 10, textStyle: { color: ink, fontSize: 12 }, formatter: (v) => f(v), inRange: { color: [cssVar("--bg-3"), accent] } },
+        series: [{ type: "heatmap", data: r.rows.map((x, i) => [xs.indexOf(dims[i]), ys.indexOf(String(x.s ?? "(empty)")), Number(x.m0)]), itemStyle: { borderColor: cssVar("--bg"), borderWidth: 2 }, label: { show: true, formatter: (p) => { const v = (p.value as number[])[2], hi = Math.max(...vals), lo = Math.min(...vals); return `{${hi > lo && (v - lo) / (hi - lo) > 0.45 ? "on" : "off"}|${f(v)}}`; }, rich: { on: { color: isDark() ? "#0e1724" : "#fff", fontSize: 12 }, off: { color: cssVar("--ink"), fontSize: 12 } } } }] };
     }
     case "scatter": {
       return { ...base, tooltip: { ...base.tooltip, trigger: "item", formatter: (p) => { const a = (p as { name: string; value: number[] }); return `${a.name}<br>${f(a.value[0])}, ${f(a.value[1])}`; } }, xAxis: { ...valAxis, name: w.measures[0] && measureLabel(w.measures[0]), nameLocation: "middle", nameGap: 24 }, yAxis: { ...valAxis, name: w.measures[1] && measureLabel(w.measures[1]) },

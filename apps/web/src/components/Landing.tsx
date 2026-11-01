@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, LazyMotion, MotionConfig, animate, domMax, m, useInView, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { AnimatePresence, LazyMotion, MotionConfig, domMax, m } from "motion/react";
 import { AccountMenu } from "@/components/ui";
 import { Icon, Logo, Mark, type BrandName, type IconName } from "./icons";
 import HeroIso from "./HeroIso";
@@ -15,97 +15,64 @@ const ContourField = dynamic(() => import("./ContourField"), { ssr: false });
 const SPRING = { type: "spring", bounce: 0, duration: 0.35 } as const;
 const Motion = ({ children }: { children: ReactNode }) => <LazyMotion features={domMax} strict><MotionConfig reducedMotion="user" transition={SPRING}>{children}</MotionConfig></LazyMotion>;
 const MLink = m.create(Link);
-const PRESS = { whileHover: { y: -1 }, whileTap: { scale: 0.98 } };
-const LIFT = { hover: { y: -1 }, press: { scale: 0.98 } };
+const PRESS = { whileTap: { scale: 0.98 } };
+const LIFT = { press: { scale: 0.98 } };
 // starts readable; .lp-settle in landing.css finishes it without JS, and skips it for reduced motion
 const settle = (delay: number) => ({ initial: { opacity: 0.6, y: 10 }, animate: { opacity: 1, y: 0 }, transition: { ...SPRING, delay } });
 const FADE = { initial: { opacity: 0, y: -8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -8 } };
 const PANEL = { enter: (d: number) => ({ opacity: 0, x: d * 24 }), on: { opacity: 1, x: 0 }, exit: (d: number) => ({ opacity: 0, x: d * -24 }) };
 
-const REVEAL = ".lp-pad > :first-child, .lp-logos li, .lp-bento > li, .lp-solutions > li, .lp-signals > li, .lp-secure > div, .lp-steps article > div:first-child, .lp-speed dl > div, .lp-table, .lp-fit > div, .lp-close > *";
-/** Each part fades up as it arrives, neighbours slightly after one another. Done by class rather than per element in React, so scrolling never re-renders the page. */
-function useReveal() {
-  const reduce = useReducedMotion();
-  useEffect(() => {
-    if (reduce || typeof IntersectionObserver === "undefined") return;
-    const list = [...document.querySelectorAll<HTMLElement>(REVEAL)];
-    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("lp-in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -6% 0px", threshold: 0.05 });
-    list.forEach((el) => { el.classList.add("lp-rv"); el.style.setProperty("--rv", `${Math.min([...el.parentElement!.children].indexOf(el), 5) * 60}ms`); io.observe(el); });
-    document.documentElement.classList.add("lp-js");
-    return () => { io.disconnect(); document.documentElement.classList.remove("lp-js"); };
-  }, [reduce]);
-}
-
-function Drift({ children }: { children: ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
-  const y = useTransform(scrollYProgress, [0, 1], [12, -12]);
-  return <m.div ref={ref} className="lp-drift" style={{ y }}>{children}</m.div>;
-}
-// the server and reduced motion both show the final value; only the count itself writes to the node
-function Stat({ value }: { value: string }) {
-  const ref = useRef<HTMLElement>(null), inView = useInView(ref, { once: true }), reduce = useReducedMotion();
-  useEffect(() => {
-    const el = ref.current, [, num, unit] = value.match(/^([\d,.]+)(.*)$/) ?? [];
-    if (!inView || reduce || !el || !num) return;
-    const dec = num.split(".")[1]?.length ?? 0;
-    const c = animate(0, parseFloat(num.replace(/,/g, "")), { ...SPRING, duration: 0.5, onUpdate: (v) => { el.textContent = v.toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + unit; }, onComplete: () => { el.textContent = value; } });
-    return () => { c.stop(); el.textContent = value; };
-  }, [inView, reduce, value]);
-  return <dt ref={ref}>{value}</dt>;
-}
-
 type MenuItem = { icon?: IconName; logo?: BrandName; name: string; line: string; href: string; badge?: string };
-type Menu = { label: string; groups: { title: string; color: string; items: MenuItem[] }[]; aside?: { title: string; body: string; cta: string; href: string } };
+type Menu = { label: string; groups: { title: string; items: MenuItem[] }[]; aside?: { title: string; body: string; cta: string; href: string } };
 const MENUS: Menu[] = [
   { label: "Product", groups: [
-    { title: "Move and shape data", color: "#0f766e", items: [
+    { title: "Move and shape data", items: [
       { icon: "flow", name: "Pipelines", line: "Sync on a schedule, with a row check after every run", href: "#connect" },
       { icon: "shield", name: "Personal data", line: "Mask sensitive columns before anything is stored", href: "#protect" },
       { icon: "model", name: "Transformations", line: "SQL, Python, dbt-style models or a no-code editor", href: "#transform" },
     ] },
-    { title: "Find and share answers", color: "#4124fb", items: [
+    { title: "Find and share answers", items: [
       { icon: "table", name: "Data views", line: "Grid, board, gallery and pivot views over any table", href: "#explore" },
       { icon: "code", name: "SQL editor and catalog", line: "Query anything and see what each column holds", href: "#explore" },
       { icon: "dashboard", name: "Dashboards and apps", line: "Visuals, DAX measures and published apps", href: "#report" },
     ] },
-    { title: "Stay in control", color: "#6d28d9", items: [
+    { title: "Stay in control", items: [
       { icon: "check", name: "Data checks", line: "Row counts and model checks on every run", href: "#platform" },
       { icon: "people", name: "Roles and audit", line: "Enforced on the server, recorded and exportable", href: "#platform" },
       { icon: "book", name: "Standard formats", line: "Build files shaped like dbt's, plus lineage events", href: "#platform" },
     ] },
   ] },
   { label: "Solutions", groups: [
-    { title: "By industry", color: "#0e7490", items: [
+    { title: "By industry", items: [
       { icon: "table", name: "Retail and ecommerce", line: "Orders, customers and stock in one set of numbers", href: "#solutions" },
       { icon: "flow", name: "Manufacturing and logistics", line: "Follow production and shipments as they change", href: "#solutions" },
       { icon: "chart", name: "Financial services", line: "Reporting with row access rules and an audit trail", href: "#solutions" },
     ] },
-    { title: "More industries", color: "#0e7490", items: [
+    { title: "More industries", items: [
       { icon: "shield", name: "Healthcare operations", line: "Mask personal data before it's stored", href: "#solutions" },
       { icon: "code", name: "Software and technology", line: "Product and billing data without one-off reports", href: "#solutions" },
       { icon: "people", name: "Professional services", line: "Projects, clients and hours on shared dashboards", href: "#solutions" },
     ] },
   ], aside: { title: "Not sure if it fits?", body: "Tell us about your data and your team, and we'll help you decide.", cta: "Talk to sales", href: "/sales" } },
-  { label: "Security", groups: [{ title: "How your data is protected", color: "#b45309", items: [
+  { label: "Security", groups: [{ title: "How your data is protected", items: [
     { icon: "plug", name: "Read-only sources", line: "No session can write back to your database", href: "#security" },
     { icon: "shield", name: "Masking before storage", line: "Originals never reach the warehouse disk", href: "#protect" },
     { icon: "code", name: "Sandboxed SQL", line: "Queries can't read files or reach the network", href: "#security" },
     { icon: "key", name: "Encrypted passwords", line: "Connection passwords are encrypted at rest", href: "#security" },
   ] }], aside: { title: "Every layer, explained", body: "See how read-only sources, masking, the sandbox and roles work together.", cta: "See the security layers", href: "#security" } },
-  { label: "Resources", groups: [{ title: "Get started and compare", color: "#4124fb", items: [
+  { label: "Resources", groups: [{ title: "Get started and compare", items: [
     { icon: "flow", name: "How it works", line: "From connecting a source to sharing a report", href: "#how" },
     { icon: "table", name: "Compare", line: "What it replaces, and when it isn't a good fit", href: "#compare" },
     { icon: "clock", name: "Speed", line: "Measured results with the sample company", href: "#speed" },
   ] }], aside: { title: "Read the docs", body: "See how each part of Basalt works, step by step.", cta: "Open the docs", href: "/docs" } },
 ];
 const SOLUTIONS: [IconName, string, string, string][] = [
-  ["people", "Founders and operators", "Get trusted numbers without hiring a data team.", "Dashboards for revenue and operations, one agreed definition for each metric, and a sample company to learn on."],
-  ["code", "Developers", "Stop writing one-off reports against production.", "A read-only copy for analytics, with SQL, Python and dbt-style models where you need them."],
-  ["chart", "Analysts", "Model, explore and publish from one workspace.", "Saved views, a catalog of every column, data checks on each build, and dashboards you can click through."],
-  ["shield", "Security and compliance", "Control who sees which data.", "Personal data masked before storage, row and table access rules, and an audit log you can export."],
+  ["people", "Founders and operators", "Get trusted numbers without hiring a data team", "Dashboards for revenue and operations, one agreed definition for each metric, and a sample company to learn on."],
+  ["code", "Developers", "Stop writing one-off reports against production", "A read-only copy for analytics, with SQL, Python and dbt-style models where you need them."],
+  ["chart", "Analysts", "Model, explore and publish from one workspace", "Saved views, a catalog of every column, data checks on each build, and dashboards you can click through."],
+  ["shield", "Security and compliance", "Control who sees which data", "Personal data masked before storage, row and table access rules, and an audit log you can export."],
 ];
-const LOGOS: [BrandName | null, string, boolean][] = [["postgres", "PostgreSQL", true], ["mysql", "MySQL", true], ["mariadb", "MariaDB", true], ["parquet", "Parquet", true], ["json", "JSON", true], ["csv", "CSV", true], ["excel", "Excel", true], ["xml", "XML", true], ["s3", "Amazon S3", true], ["gcs", "Google Cloud Storage", true], ["azure", "Azure Blob Storage", true], ["snowflake", "Snowflake", true], ["bigquery", "BigQuery", true], ["mongodb", "MongoDB", true], ["clickhouse", "ClickHouse", true], ["stripe", "Stripe", true], ["shopify", "Shopify", true]];
+const LOGOS: [BrandName | null, string, boolean][] = [["postgres", "PostgreSQL", true], ["mysql", "MySQL", true], ["mariadb", "MariaDB", true], ["parquet", "Parquet", true], ["json", "JSON", true], ["csv", "CSV", true], ["excel", "Excel", true], ["xml", "XML", true], ["s3", "Amazon S3", true], ["gcs", "Google Cloud", true], ["azure", "Azure Blob Storage", true], ["snowflake", "Snowflake", true], ["bigquery", "BigQuery", true], ["mongodb", "MongoDB", true], ["clickhouse", "ClickHouse", true], ["stripe", "Stripe", true], ["shopify", "Shopify", true]];
 
 /* ---- small parts ---- */
 function Tag({ icon, label, dark }: { icon: IconName; label: string; dark?: boolean }) {
@@ -149,11 +116,11 @@ function ReportProof() {
 }
 
 const STEPS: { id: string; nav: string; title: string; muted: string; body: string; proof: () => ReactNode }[] = [
-  { id: "connect", nav: "Connect a source", title: "Connect your database.", muted: "Read-only, always.", body: "Add a database with a read-only login, connect cloud storage on AWS, Azure or Google Cloud, or upload a file. Basalt opens every session as read-only, warns you if the login can write, and can follow PostgreSQL changes as they happen.", proof: ConnectProof },
-  { id: "protect", nav: "Protect personal data", title: "Choose what gets stored.", muted: "Originals stay at the source.", body: "Basalt scans column names and sampled values for personal data. Rules run before anything is written to disk, and a new personal data column is held back until someone chooses a rule.", proof: ProtectProof },
-  { id: "transform", nav: "Transform", title: "Clean and join it.", muted: "With or without code.", body: "Write SQL or Python, use dbt-style models, or prepare data in a no-code editor. Models run in dependency order, data checks report anything wrong, and lineage shows what feeds what.", proof: TransformProof },
-  { id: "explore", nav: "Explore", title: "Find the answer.", muted: "Like a spreadsheet.", body: "Edit data together in bases, or save grid, board, gallery and pivot views over any table. When you need more, the SQL editor has autocomplete, history and query plans, and the catalog shows what each column holds.", proof: ExploreProof },
-  { id: "report", nav: "Report", title: "Share the numbers.", muted: "Everyone reads the same ones.", body: "Build dashboards with slicers, cross-filtering and DAX measures, then publish them as apps. A shared semantic model keeps revenue meaning the same thing on every page, and live dashboards refresh when data changes.", proof: ReportProof },
+  { id: "connect", nav: "Connect a source", title: "Connect your database.", muted: "Read-only, always", body: "Add a database with a read-only login, connect cloud storage on AWS, Azure or Google Cloud, or upload a file. Basalt opens every session as read-only, warns you if the login can write, and can follow PostgreSQL changes as they happen.", proof: ConnectProof },
+  { id: "protect", nav: "Protect personal data", title: "Choose what gets stored.", muted: "Originals stay at the source", body: "Basalt scans column names and sampled values for personal data. Rules run before anything is written to disk, and a new personal data column is held back until someone chooses a rule.", proof: ProtectProof },
+  { id: "transform", nav: "Transform", title: "Clean and join it.", muted: "With or without code", body: "Write SQL or Python, use dbt-style models, or prepare data in a no-code editor. Models run in dependency order, data checks report anything wrong, and lineage shows what feeds what.", proof: TransformProof },
+  { id: "explore", nav: "Explore", title: "Find the answer.", muted: "Like a spreadsheet", body: "Edit data together in bases, or save grid, board, gallery and pivot views over any table. When you need more, the SQL editor has autocomplete, history and query plans, and the catalog shows what each column holds.", proof: ExploreProof },
+  { id: "report", nav: "Report", title: "Share the numbers.", muted: "Everyone reads the same ones", body: "Build dashboards with slicers, cross-filtering and DAX measures, then publish them as apps. A shared semantic model keeps revenue meaning the same thing on every page, and live dashboards refresh when data changes.", proof: ReportProof },
 ];
 
 function Flow() {
@@ -166,39 +133,16 @@ function Flow() {
   return (
     <div className="lp-flow">
       <nav aria-label="Steps"><ol>{STEPS.map((s) => <li key={s.id}>{active === s.id && <m.span layoutId="lp-step-bar" className="lp-step-bar" />}<a href={`#${s.id}`} aria-current={active === s.id ? "step" : undefined}>{s.nav}</a></li>)}</ol></nav>
-      <div className="lp-steps">{STEPS.map((s) => <article id={s.id} key={s.id}><div><h3>{s.title} <span>{s.muted}</span></h3><p>{s.body}</p></div><m.div className={`lp-proof-slot${active === s.id ? " on" : ""}`} initial={{ y: 0 }} animate={{ y: active === s.id ? 0 : 8 }}>{s.proof()}</m.div></article>)}</div>
+      <div className="lp-steps">{STEPS.map((s) => <article id={s.id} key={s.id}><div><h3>{s.title} <span>{s.muted}</span></h3><p>{s.body}</p></div><div className={`lp-proof-slot${active === s.id ? " on" : ""}`}>{s.proof()}</div></article>)}</div>
     </div>
   );
 }
 
 /* ---- dark section art ---- */
-function Spectrum() {
-  const n = 165, H = 200, W = n * 8;
-  return (
-    <svg className="lp-spectrum" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-      {Array.from({ length: n }, (_, i) => {
-        const t = i / (n - 1), x = i * 8 + 4, top = Math.round(H - 14 - Math.sin(Math.PI * t) * (H - 22));
-        return <line key={i} x1={x} x2={x} y1={top} y2={H} stroke={`hsl(${Math.round(t * 300)} 72% 58%)`} strokeWidth="1.25" vectorEffect="non-scaling-stroke" />;
-      })}
-    </svg>
-  );
-}
-function IsoBars() {
-  const heights = [190, 165, 175, 135, 120, 95, 75, 52];
-  return (
-    <svg className="lp-iso" viewBox="0 0 560 470" aria-hidden="true">
-      <path d="M40 240 330 440 530 320 240 120z" fill="none" stroke="var(--line)" />
-      {heights.map((h, i) => { const x = 70 + i * 40, y = 225 + i * 27, hi = i === heights.length - 1; const f = hi ? "#e2ebfb" : "#fff", s = hi ? "#4124fb" : "#b5bcc7"; return <g key={i} stroke={s} strokeLinejoin="round">
-        <path d={`M${x} ${y}V${y - h}l30 18v${h}z`} fill={hi ? "#d3e0f8" : "#eef0f3"} /><path d={`M${x + 30} ${y + 18}V${y - h + 18}l30 -18v${h}z`} fill={f} /><path d={`M${x} ${y - h}l30 18 30-18-30-18z`} fill={hi ? "#c0d3f5" : "#f7f8f9"} />
-      </g>; })}
-    </svg>
-  );
-}
-
 const CLOSE_DELAY = 140;
-const MenuLink = ({ it, color, onGo }: { it: MenuItem; color: string; onGo: () => void }) => (
+const MenuLink = ({ it, onGo }: { it: MenuItem; onGo: () => void }) => (
   <m.a {...PRESS} className="lpn-link" href={it.href} onClick={onGo}>
-    <span className="lpn-tile" style={{ color, background: `color-mix(in srgb, ${color} 11%, transparent)` }}>{it.logo ? <Logo name={it.logo} size={18} /> : <Icon name={it.icon ?? "file"} size={17} />}</span>
+    <span className="lpn-tile">{it.logo ? <Logo name={it.logo} size={18} /> : <Icon name={it.icon ?? "file"} size={17} />}</span>
     <span><b>{it.name}{it.badge && <i>{it.badge}</i>}</b><small>{it.line}</small></span>
   </m.a>
 );
@@ -253,7 +197,7 @@ export function Nav({ base = "" }: { base?: string }) {
           <m.div layout className="lpn-viewport">
             <AnimatePresence mode="popLayout" initial={false} custom={dir}>
               <m.div key={MENUS[current].label} layout="position" custom={dir} variants={PANEL} initial="enter" animate="on" exit="exit" className="lpn-panel">
-                {MENUS[current].groups.map((g) => <div key={g.title} className="lpn-col"><h4>{g.title}</h4>{g.items.map((it) => <MenuLink key={it.name} it={{ ...it, href: to(it.href) }} color={g.color} onGo={closeAll} />)}</div>)}
+                {MENUS[current].groups.map((g) => <div key={g.title} className="lpn-col"><h4>{g.title}</h4>{g.items.map((it) => <MenuLink key={it.name} it={{ ...it, href: to(it.href) }} onGo={closeAll} />)}</div>)}
                 {MENUS[current].aside && <div className="lpn-aside-wrap"><m.a {...PRESS} className="lpn-aside" href={to(MENUS[current].aside.href)} onClick={closeAll}><PixelCorner /><b>{MENUS[current].aside.title}</b><small>{MENUS[current].aside.body}</small><span>{MENUS[current].aside.cta}<Icon name="chevRight" size={15} /></span></m.a></div>}
               </m.div>
             </AnimatePresence>
@@ -264,7 +208,7 @@ export function Nav({ base = "" }: { base?: string }) {
       <AnimatePresence>{mobile && (
         <m.div key="mobile" {...FADE} id="lpn-mobile" className="lpn-mobile">
           <div className="lpn-mobile-in"><div className="lpn-mobile-scroll">
-            {MENUS.map((menu) => <div key={menu.label} className="lpn-mgroup"><h4>{menu.label}</h4>{menu.groups.map((g) => g.items.map((it) => <MenuLink key={it.name} it={{ ...it, href: to(it.href) }} color={g.color} onGo={closeAll} />))}</div>)}
+            {MENUS.map((menu) => <div key={menu.label} className="lpn-mgroup"><h4>{menu.label}</h4>{menu.groups.map((g) => g.items.map((it) => <MenuLink key={it.name} it={{ ...it, href: to(it.href) }} onGo={closeAll} />))}</div>)}
             <div className="lpn-mactions"><MLink {...PRESS} className="lp-btn sec" href="/docs">Docs</MLink>{user ? <><MLink {...PRESS} className="lp-btn pri" href="/home">Open workspace</MLink><m.button {...PRESS} className="lp-btn sec" onClick={signOut}>Sign out {user.name}</m.button></> : <><MLink {...PRESS} className="lp-btn sec" href="/login">Sign in</MLink><MLink {...PRESS} className="lp-btn pri" href="/sales">Talk to sales</MLink></>}</div>
           </div></div>
         </m.div>
@@ -280,28 +224,25 @@ const CARDS: { title: string; body: string; proof: ReactNode }[] = [
   { title: "An audit trail", body: "Sign-ins, rule changes and access changes are recorded, and you can export them.", proof: <div className="lp-list">{[["Changed personal data rule", "customers.phone"], ["Added member", "as Viewer"], ["Ran sync", "7 tables"]].map(([a, b]) => <div key={a}><b>{a}</b><small>{b}</small></div>)}</div> },
   { title: "Standard formats", body: "Builds save files shaped like dbt's manifest and run results, and syncs log Airbyte-style messages.", proof: <div className="lp-list">{["manifest.json", "run_results.json", "OpenLineage event"].map((a) => <div key={a}><code>{a}</code><Icon name="check" size={15} /></div>)}</div> },
 ];
-const SIGNALS: [IconName, string, string][] = [["plug", "Read-only sources.", "Sessions open read-only."], ["shield", "Masked first.", "Rules run before storage."], ["code", "Sandboxed SQL.", "No file or network access."], ["key", "Encrypted secrets.", "AES-256-GCM at rest."], ["people", "Two-factor sign-in.", "Required by your admin if you choose."]];
+const SIGNALS: [IconName, string, string][] = [["key", "Encrypted secrets", "AES-256-GCM at rest"], ["people", "Two-factor sign-in", "Required by your admin if you choose"]];
 const JOBS: [string, string, string][] = [["Copy data out of your databases", "Airbyte, Fivetran", "Pipelines and connectors"], ["Clean and join it", "dbt, Power Query", "Models and query editor"], ["Store it and query it", "Snowflake, Databricks SQL", "DuckDB warehouse and SQL editor"], ["Edit it like a spreadsheet", "Airtable", "Bases and data views"], ["Report on it", "Power BI, Metabase", "Semantic model, dashboards and apps"]];
 const STATS: [string, string][] = [["2.1 s", "To sync and mask the sample company"], ["222,740", "Rows copied in that sync"], ["0.2 s", "To build 13 models and run their checks"], ["144 ms", "Typical delay for a PostgreSQL change to be queryable, at 10,000 changes a second"]];
 const FOOT: [string, [string, string][]][] = [
   ["Product", [["Pipelines", "#connect"], ["Personal data", "#protect"], ["Transformations", "#transform"], ["Data views", "#explore"], ["Dashboards", "#report"]]],
-  ["Company use", [["Solutions", "#solutions"], ["Connectors", "#connectors"], ["Security", "#security"], ["Compare", "#compare"]]],
+  ["Company", [["Solutions", "#solutions"], ["Connectors", "#connectors"], ["Security", "#security"], ["Compare", "#compare"]]],
   ["Get started", [["How it works", "#how"], ["Docs", "/docs"], ["Talk to sales", "/sales"], ["Sign in", "/login"]]],
   ["Legal", [["Terms of service", "/terms"], ["Privacy policy", "/privacy"]]],
 ];
 
-function Reveal() { useReveal(); return null; }
-
 export default function Landing() {
   return (
     <Motion><div className="lp">
-      <Reveal />
       <Nav />
       <section className="lp-hero">
         <div className="lp-contour" aria-hidden="true"><ContourField /></div>
         <div className="lp-wrap lp-hero-in">
-          <m.a {...settle(0)} className="lp-new lp-settle" href="#connect"><span><Icon name="flow" size={13} />New</span>Real-time data<Icon name="chevRight" size={14} /></m.a>
-          <m.h1 {...settle(0.04)} className="lp-settle">Your whole data stack, in one workspace.</m.h1>
+          <m.a {...settle(0)} className="lp-new lp-settle" href="#connect"><span>New</span>Real-time data<Icon name="chevRight" size={14} /></m.a>
+          <m.h1 {...settle(0.04)} className="lp-settle">Report on your databases, with personal data masked first</m.h1>
           <m.p {...settle(0.1)} className="lp-settle">Basalt copies data from your databases, masks personal data before it&apos;s stored, and gives your team transformations, editable bases, SQL, dashboards and apps.</m.p>
           <m.div {...settle(0.16)} className="lp-cta lp-settle"><MLink {...PRESS} className="lp-btn pri" href="/sales">Talk to sales</MLink><m.a {...PRESS} className="lp-btn sec" href="#how">See how it works</m.a></m.div>
         </div>
@@ -310,48 +251,46 @@ export default function Landing() {
 
       <section className="lp-logos" id="connectors">
         <div className="lp-wrap"><div className="lp-rails">
-          <p>Reads from your databases, cloud storage and files.</p>
-          <ul>{LOGOS.map(([l, n, live]) => <m.li key={n} className={live ? "" : "planned"} whileHover="hover" whileTap="press"><m.span className="lp-logo-in" variants={LIFT}>{l ? <Logo name={l} size={24} /> : <Icon name="file" size={24} />}<span>{n}</span></m.span>{!live && <small>Planned</small>}</m.li>)}<li className="more"><MLink {...PRESS} href="/docs">More connectors</MLink></li></ul>
+          <p>Reads from your databases, cloud storage and files</p>
+          <ul>{LOGOS.map(([l, n, live]) => <m.li key={n} className={live ? "" : "planned"} whileTap="press"><m.span className="lp-logo-in" variants={LIFT}>{l ? <Logo name={l} size={24} /> : <Icon name="file" size={24} />}<span>{n}</span></m.span>{!live && <small>Planned</small>}</m.li>)}<li className="more"><MLink {...PRESS} href="/docs">More connectors</MLink></li></ul>
         </div></div>
       </section>
 
       <section className="lp-sec" id="how"><div className="lp-wrap"><div className="lp-rails lp-pad">
-        <Head tag={{ icon: "flow", label: "How it works" }} title="From raw tables to the report your CEO reads." muted="In one workspace." />
+        <Head tag={{ icon: "flow", label: "How it works" }} title="From raw tables to the report your CEO reads." muted="In one workspace" />
         <Flow />
       </div></div></section>
 
       <section className="lp-sec tint" id="platform"><div className="lp-wrap"><div className="lp-rails lp-pad">
-        <Head tag={{ icon: "settings", label: "Platform" }} title="Built for the way companies run." muted="With the controls enterprises ask for." />
+        <Head tag={{ icon: "settings", label: "Platform" }} title="Every run checked, every access change recorded." muted="With the controls enterprises ask for" />
         <ul className="lp-bento">{CARDS.map((c) => <li key={c.title}><div><h3>{c.title}</h3><p>{c.body}</p></div><div className="lp-card-proof">{c.proof}</div></li>)}</ul>
       </div></div></section>
 
       <section className="lp-sec" id="solutions"><div className="lp-wrap"><div className="lp-rails lp-pad">
-        <Head tag={{ icon: "people", label: "Solutions" }} title="One workspace for the whole company." muted="Each team gets what it needs." />
+        <Head tag={{ icon: "people", label: "Solutions" }} title="Founders, developers, analysts and security in one workspace." muted="Each team gets what it needs" />
         <ul className="lp-solutions">{SOLUTIONS.map(([ic, a, b, c]) => <li key={a}><span className="ic"><Icon name={ic} size={20} /></span><h3>{a}</h3><b>{b}</b><p>{c}</p></li>)}</ul>
       </div></div></section>
 
       <section className="lp-dark" id="security"><div className="lp-wrap"><div className="lp-rails">
-        <Spectrum />
-        <ul className="lp-signals">{SIGNALS.map(([ic, a, b]) => <li key={a}><Icon name={ic} size={20} /><b>{a}</b><span>{b}</span></li>)}</ul>
         <div className="lp-secure">
-          <div><Tag icon="shield" label="Security" dark /><h2>Careful at every layer. <span>Because it&apos;s your data.</span></h2><p>Every layer assumes the one before it could fail. Sources can&apos;t be written to, originals never reach the warehouse, and SQL can&apos;t leave the sandbox. Python models run as real code, so only admins can change them.</p></div>
-          <div className="lp-sec-art"><Drift><SecurityIso /></Drift><ul className="lp-sec-list">{[["Read-only sources", "No session can write back"], ["Masking", "Originals never reach the disk"], ["Sandboxed warehouse", "SQL can't read files or the network"], ["Roles and audit", "Checked on every API call"]].map(([a, b]) => <li key={a}><b>{a}</b><span>{b}</span></li>)}</ul></div>
+          <div><Tag icon="shield" label="Security" dark /><h2>Careful at every layer. <span>Because it&apos;s your data</span></h2><p>Every layer assumes the one before it could fail. Sources can&apos;t be written to, originals never reach the warehouse, and SQL can&apos;t leave the sandbox. Python models run as real code, so only admins can change them.</p></div>
+          <div className="lp-sec-art"><div className="lp-drift"><SecurityIso /></div><ul className="lp-sec-list">{[["Read-only sources", "No session can write back"], ["Masking", "Originals never reach the disk"], ["Sandboxed warehouse", "SQL can't read files or the network"], ["Roles and audit", "Checked on every API call"]].map(([a, b]) => <li key={a}><b>{a}</b><span>{b}</span></li>)}</ul></div>
         </div>
+        <ul className="lp-signals">{SIGNALS.map(([ic, a, b]) => <li key={a}><Icon name={ic} size={20} /><b>{a}</b><span>{b}</span></li>)}</ul>
       </div></div></section>
 
       <section className="lp-sec" id="speed"><div className="lp-wrap"><div className="lp-rails lp-pad lp-speed">
         <div>
           <Tag icon="chart" label="Speed" />
-          <h2>Fast on large tables. <span>No cluster to manage.</span></h2>
+          <h2>Fast on large tables. <span>No cluster to manage</span></h2>
           <p>The warehouse stores data by column, so totals over many rows stay quick on ordinary hardware.</p>
-          <dl>{STATS.map(([a, b]) => <div key={b}><Stat value={a} /><dd>{b}</dd></div>)}</dl>
+          <dl>{STATS.map(([a, b]) => <div key={b}><dt>{a}</dt><dd>{b}</dd></div>)}</dl>
           <small>Measured on a Windows PC, with the sample company and a test database. Your numbers will vary.</small>
         </div>
-        <Drift><IsoBars /></Drift>
       </div></div></section>
 
       <section className="lp-sec tint" id="compare"><div className="lp-wrap"><div className="lp-rails lp-pad">
-        <Head tag={{ icon: "table", label: "Compare" }} title="Five subscriptions, or one workspace." muted="It covers the core of each job." />
+        <Head tag={{ icon: "table", label: "Compare" }} title="Five subscriptions, or one workspace." muted="It covers the core of each job" />
         <div className="lp-table"><table><thead><tr><th>The job</th><th>Usually done with</th><th>In Basalt</th></tr></thead><tbody>{JOBS.map(([a, b, c]) => <tr key={a}><td data-l="The job">{a}</td><td data-l="Usually done with">{b}</td><td data-l="In Basalt"><b>{c}</b></td></tr>)}</tbody></table></div>
         <div className="lp-fit">
           <div><h3>A good fit</h3><ul><li><Icon name="check" />Your data lives in PostgreSQL, MySQL, MariaDB, cloud storage or files</li><li><Icon name="check" />You want one tool with one set of permissions, not five</li><li><Icon name="check" />Personal data has to be masked before it&apos;s stored</li></ul></div>
@@ -360,7 +299,7 @@ export default function Landing() {
       </div></div></section>
 
       <section className="lp-sec closing" id="start"><div className="lp-wrap"><div className="lp-rails lp-pad lp-close">
-        <h2>See Basalt with your own data. <span>Bring one database and one report.</span></h2>
+        <h2>See Basalt with your own data. <span>Bring one database and one report</span></h2>
         <div>
           <p>Tell us what you use today, and we&apos;ll show you how it would look in Basalt and whether it fits your team.</p>
           <div className="lp-cta left"><MLink {...PRESS} className="lp-btn pri" href="/sales">Talk to sales</MLink><MLink {...PRESS} className="lp-btn sec" href="/docs">Read the docs</MLink></div>
