@@ -8,7 +8,7 @@ import tls from "node:tls";
 import { DuckDBInstance, type DuckDBDataChunk } from "@duckdb/node-api";
 import type { Client as PgClient } from "pg";
 import type { Connection as MyConn } from "mysql2/promise";
-import { withConn, sourceStore, toResult } from "./engine";
+import { scratchDb, withConn, sourceStore, toResult } from "./engine";
 import { airbyteSource } from "./airbyte";
 import { cloudSource } from "./cloud";
 import { getSecret } from "./files";
@@ -163,7 +163,7 @@ async function pgSource(conn: Connection, password: string): Promise<Source> {
     /** Reads through DuckDB's PostgreSQL reader in a throwaway engine, which is far faster than passing rows through Node. */
     async fastRead(stream, { columns, cursor, after, maxRows, orderBy, inclusive }) {
       try {
-        gate ??= await DuckDBInstance.create(":memory:");
+        gate ??= await scratchDb();
         const c = await gate.connect(), e = (v: unknown) => `'${String(v ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
         await c.run("INSTALL postgres; LOAD postgres; INSTALL icu; LOAD icu; SET TimeZone = 'UTC'");
         // The same checks as the client above. libpq can't use Node's roots directly, and may reconnect during a read, so the file stays until close

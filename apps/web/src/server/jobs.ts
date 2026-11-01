@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { withConn, qualified, sourceStore } from "./engine";
 import { openSource, type Source } from "./connectors";
-import { audit, getConfig, readJson, writeJson, getRuns, getStreamState, maskSalt, saveRun, saveStreamState } from "./files";
+import { audit, getConfig, openCursor, readJson, sealCursor, writeJson, getRuns, getStreamState, maskSalt, saveRun, saveStreamState } from "./files";
 import { getAlertSettings, raise, resolve } from "./alerts";
 import { getCdcStatus, holdChanges, releaseChanges, takeDirtyPipelines } from "./cdc";
 import { runScheduledAutomations } from "./bases";
@@ -26,7 +26,9 @@ import { nodeId, selectNodes } from "@/lib/dbt-select";
 import { dbtBuild, dbtDocs, dbtFreshness, dbtUnavailable, dbtVersion } from "./dbt";
 import { detectPii, maskExpr, scanStructured, STRUCTURED_SQL } from "@/lib/pii";
 import { fromTextSql, isNestedType } from "@/lib/nested";
+import { warmDashboards } from "./analytics";
 import { lit, q } from "@/lib/sql";
+import { loadSource, replaceKeysSql, syncProblem } from "@/lib/syncPlan";
 import type { Column, LogMessage, Model, Pipeline, Run, StreamCfg, StreamStat } from "@/lib/types";
 
 const uid = () => crypto.randomUUID();
@@ -73,12 +75,14 @@ async function syncStream(src: Source, slug: string, s: StreamCfg, columns: Colu
   stat.heldBack = heldBack;
   if (heldBack.length) log({ type: "LOG", level: "WARN", stream: s.name, message: `Held back until a rule is chosen: ${heldBack.join(", ")}` });
   const schema = `raw_${slug}`, name = s.name.replace(/\W/g, "_"), dest = qualified(schema, name);
-  const after = s.mode === "full_refresh" ? undefined : state[s.name];
+  const after = s.mode === "full_refresh" ? undefined : openCursor(state[s.name]);
   if (!copied.length) { log({ type: "LOG", level: "WARN", stream: s.name, message: "Nothing to copy: every column is held back or left out" }); return stat; }
+  const unsafe = () => { const why = syncProblem(s, copied.map((x) => x.col.name), !!src.commitState); if (why) throw new Error(why); };
+  unsafe();
 
   await withConn(async (c) => {
     await c.run(`CREATE SCHEMA IF NOT EXISTS ${q(schema)}`);
-    // Raw rows live only in this connection's TEMP table, in memory. Only masked output is written to the warehouse file.
+    // Raw rows live only in this connection's TEMP table: in memory, or encrypted if they spill. Only masked output is written to the warehouse file.
     await c.run(`CREATE OR REPLACE TEMP TABLE _load (${copied.map((x) => `${q(x.col.name)} VARCHAR`).join(", ")})`);
     const app = await c.createAppender("_load", "main", "temp");
     const opts = { columns: copied.map((x) => x.col), cursor: s.mode === "full_refresh" ? undefined : s.cursor, after, maxRows: s.maxRows, orderBy: s.primaryKey, inclusive: s.mode === "incremental_dedupe" && !!s.primaryKey, state: s.mode === "full_refresh" ? undefined : state, withheld: Object.keys(s.rules).filter((k) => s.rules[k] !== "keep"), log };
@@ -108,6 +112,8 @@ async function syncStream(src: Source, slug: string, s: StreamCfg, columns: Colu
       log({ type: "LOG", level: "WARN", stream: s.name, message: `Held back until a rule is chosen: ${x.col.name} (${found.kind} in ${found.path})` });
     }
     if (!copied.length) { await c.run("DROP TABLE _load"); log({ type: "LOG", level: "WARN", stream: s.name, message: "Nothing to copy: every column is held back or left out" }); return; }
+    // A nested finding can have just removed the key or the cursor
+    unsafe();
     // A nested value that doesn't fit its type becomes empty, which must not go unnoticed
     for (const x of copied) if (isNestedType(x.col.type)) {
       const lost = Number((await c.runAndReadAll(`SELECT count(*) n FROM _load WHERE ${q(x.col.name)} IS NOT NULL AND ${fromTextSql(x.col.name, x.col.type)} IS NULL`)).getRowObjectsJson()[0].n);
@@ -115,7 +121,7 @@ async function syncStream(src: Source, slug: string, s: StreamCfg, columns: Colu
     }
     const typed = copied.map((x) => `${fromTextSql(x.col.name, x.col.type)} AS ${q(x.col.name)}`).join(", ");
     // A view, not a table: holding 2 million rows twice took most of a large sync
-    await c.run(`CREATE OR REPLACE TEMP VIEW _typed AS SELECT ${typed} FROM _load`);
+    await c.run(`CREATE OR REPLACE TEMP VIEW _typed AS SELECT ${typed} FROM ${loadSource(s)}`);
     const masked = copied.map((x) => x.expr).join(", ");
     const payload = `SELECT ${masked}, now()::TIMESTAMP AS _basalt_synced_at FROM _typed`;
     const exists = Number((await c.runAndReadAll(`SELECT count(*) n FROM information_schema.tables WHERE table_schema = ${lit(schema)} AND table_name = ${lit(name)}`)).getRowObjectsJson()[0].n) > 0;
@@ -133,7 +139,7 @@ async function syncStream(src: Source, slug: string, s: StreamCfg, columns: Colu
       // All or nothing: a crash between these two steps must not lose the rows being replaced
       await c.run("BEGIN");
       try {
-      if (s.mode === "incremental_dedupe" && s.primaryKey) await c.run(`DELETE FROM ${dest} WHERE ${q(s.primaryKey)} IN (SELECT ${q(s.primaryKey)} FROM _typed)`);
+      if (s.mode === "incremental_dedupe" && s.primaryKey) await c.run(replaceKeysSql(dest, s.primaryKey, s.rules[s.primaryKey], maskSalt()));
       await c.run(`ALTER TABLE ${dest} ADD COLUMN IF NOT EXISTS "_basalt_synced_at" TIMESTAMP`);
       const names = [...copied.map((x) => q(x.col.name)), q("_basalt_synced_at")].join(", ");
       await c.run(`INSERT INTO ${dest} (${names}) ${payload}`);
@@ -143,7 +149,7 @@ async function syncStream(src: Source, slug: string, s: StreamCfg, columns: Colu
     stat.written = stat.read;
     if (s.cursor && s.mode !== "full_refresh" && copied.some((x) => x.col.name === s.cursor) && stat.read > 0) {
       const max = (await c.runAndReadAll(`SELECT max(${q(s.cursor)})::VARCHAR m FROM _typed`)).getRowObjectsJson()[0].m;
-      if (max) { state[s.name] = String(max); log({ type: "STATE", stream: s.name, state: { cursor_field: s.cursor, cursor: (s.rules[s.cursor] ?? "keep") === "keep" ? max : "masked" } }); }
+      if (max) { state[s.name] = (s.rules[s.cursor] ?? "keep") === "keep" ? String(max) : sealCursor(String(max)); log({ type: "STATE", stream: s.name, state: { cursor_field: s.cursor, cursor: (s.rules[s.cursor] ?? "keep") === "keep" ? max : "masked" } }); }
     }
     if (s.mode !== "full_refresh" && src.commitState?.(s.name, state)) log({ type: "STATE", stream: s.name, state: { connector_state: "saved" } });
     // Needs every key, and a protected key can't be compared with the source, so this only runs where the answer can be trusted
@@ -244,6 +250,7 @@ export async function runPipeline(id: string, trigger: Run["trigger"], actor: st
   saveRun(run);
   audit(actor, `Ran sync: ${p.name}`, run.summary ?? "");
   await alertForSync(p.id, p.name, run);
+  if (run.status !== "failed") warmDashboards();
   if (thenModels && p.runModelsAfter && run.status !== "failed" && cfg.models.length) await runModels(trigger, actor).catch(() => {});
   return run;
 }
@@ -334,6 +341,7 @@ export async function runModels(trigger: Run["trigger"], actor: string, only?: s
   run.artifacts = { ...run.artifacts, manifest: dbtManifest ?? (ctx ? buildManifest(ctx, metadata) : { metadata, nodes: {} }), run_results: { metadata, results, elapsed_time: (Date.parse(run.endedAt) - Date.parse(run.startedAt)) / 1000 } };
   await ol.finish(results as never);
   saveRun(run);
+  if (run.status !== "failed") warmDashboards();
   audit(actor, `Ran models: ${run.name}`, run.summary ?? "");
   if (!only && !sel) {
     const key = "models", href = `/runs?r=${run.id}`, bad = failCount > 0 || skipped > 0 || run.status === "failed";

@@ -9,7 +9,7 @@ export type ConnectorType = "sample" | "file" | "postgres" | "mysql" | "s3" | "g
 
 export type Column = { name: string; type: string };
 export type Kind = "number" | "date" | "bool" | "text" | "json";
-export type Result = { columns: (Column & { kind: Kind })[]; rows: Record<string, unknown>[]; ms: number; truncated: boolean };
+export type Result = { columns: (Column & { kind: Kind })[]; rows: Record<string, unknown>[]; ms: number; truncated: boolean; cached?: boolean };
 
 /** A pinned Airbyte connector. Holds no settings or secrets: those are in the encrypted secret store. */
 export type AirbyteRef = { definitionId: string; name: string; repo: string; version: string; license?: string; icon?: string; routes: ("docker" | "pypi" | "manifest")[]; pypi?: string; cdk?: string; idleSeconds?: number; secretKeys: string[] };

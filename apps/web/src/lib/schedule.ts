@@ -2,13 +2,14 @@ import type { Run } from "./types.ts";
 
 const RETRY_WAIT = 5 * 60000;
 
-/** Whether a failed sync should run again: only after a pause, and only as many times as the pipeline allows. */
+/** Whether a failed sync should run again: only after a pause, and only as many times as the pipeline allows. A partly failed sync counts: some of its tables are out of date. */
 export function shouldRetry(runs: Run[], pipeline: string, retries: number, now: number) {
   if (!retries) return false;
   const mine = runs.filter((r) => r.kind === "sync" && r.refId === pipeline);
-  if (mine[0]?.status !== "failed" || now - Date.parse(mine[0].startedAt) < RETRY_WAIT) return false;
+  const bad = (r?: Run) => r?.status === "failed" || r?.status === "partial";
+  if (!bad(mine[0]) || now - Date.parse(mine[0].startedAt) < RETRY_WAIT) return false;
   let fails = 0;
-  for (const r of mine) { if (r.status !== "failed") break; fails++; }
+  for (const r of mine) { if (!bad(r)) break; fails++; }
   return fails <= retries;
 }
 

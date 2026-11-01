@@ -129,6 +129,8 @@ test("scheduling decisions", async () => {
   assert.equal(shouldRetry([run("failed", 10), run("succeeded", 100)], "p", 1, now), true);
   assert.equal(shouldRetry([run("failed", 10), run("failed", 20)], "p", 1, now), false, "out of retries");
   assert.equal(shouldRetry([run("succeeded", 10)], "p", 3, now), false);
+  assert.equal(shouldRetry([run("partial", 10), run("succeeded", 100)], "p", 1, now), true, "a partly failed sync retries");
+  assert.equal(shouldRetry([run("partial", 10), run("failed", 20)], "p", 1, now), false, "and uses up the same retries");
   assert.equal(hoursStale([run("failed", 10), run("succeeded", 120)], "p", now), 2);
   assert.equal(hoursStale([run("failed", 10)], "p", now), null);
   assert.deepEqual([...withDownstream([{ name: "a", refs: [] }, { name: "b", refs: ["a"] }, { name: "c", refs: ["b"] }, { name: "z", refs: [] }], "a")].sort(), ["a", "b", "c"]);

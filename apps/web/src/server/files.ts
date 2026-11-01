@@ -74,18 +74,26 @@ export function appKey(): Buffer {
   }
 }
 export const maskSalt = () => crypto.createHmac("sha256", appKey()).update("mask-salt").digest("hex");
-export function saveSecret(id: string, secret: string) {
+const seal = (secret: string) => {
   const iv = crypto.randomBytes(12), c = crypto.createCipheriv("aes-256-gcm", appKey(), iv);
   const data = Buffer.concat([c.update(secret, "utf8"), c.final()]);
-  writeJson("secrets.json", { ...readJson<Record<string, string>>("secrets.json", {}), [id]: [iv, c.getAuthTag(), data].map((b) => b.toString("hex")).join(".") });
-}
-export function getSecret(id: string): string | undefined {
-  const v = readJson<Record<string, string>>("secrets.json", {})[id];
-  if (!v) return undefined;
+  return [iv, c.getAuthTag(), data].map((b) => b.toString("hex")).join(".");
+};
+const unseal = (v: string) => {
   const [iv, tag, data] = v.split(".").map((h) => Buffer.from(h, "hex"));
   const d = crypto.createDecipheriv("aes-256-gcm", appKey(), iv);
   d.setAuthTag(tag);
   return Buffer.concat([d.update(data), d.final()]).toString("utf8");
+};
+/** A cursor with a personal data rule is an original value, so it's encrypted in the saved progress like a password. */
+export const sealCursor = (v: string) => `sealed:${seal(v)}`;
+export const openCursor = (v?: string) => (v?.startsWith("sealed:") ? unseal(v.slice(7)) : v);
+export function saveSecret(id: string, secret: string) {
+  writeJson("secrets.json", { ...readJson<Record<string, string>>("secrets.json", {}), [id]: seal(secret) });
+}
+export function getSecret(id: string): string | undefined {
+  const v = readJson<Record<string, string>>("secrets.json", {})[id];
+  return v ? unseal(v) : undefined;
 }
 export function deleteSecret(id: string) {
   const all = readJson<Record<string, string>>("secrets.json", {});

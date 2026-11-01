@@ -248,7 +248,11 @@ Each connection has a pipeline, which copies the tables you choose.
 | Incremental: add new rows | Adds rows newer than the last sync | A cursor column |
 | Incremental: add and update by key | Adds new rows and updates changed ones | A cursor column and a primary key |
 
-Without a cursor column, an incremental table reads every row on each sync, and the page warns you.
+**Add new rows** won't run without a cursor column, because every sync would add every row again. **Add and update by key** still runs without one, but reads every row on each sync.
+
+A cursor column must be copied, not held back or left out. A primary key used for updates must be kept as is or replaced with a code, because masked text can match other rows. A sync that can't meet these stops with a message and leaves the copy as it was.
+
+If a table has the same key twice in one sync, the last row wins. Rows with no key are all kept.
 
 ## Other settings
 
@@ -1098,11 +1102,12 @@ These apply to everyone in the workspace.
   { slug: "how-basalt-handles-data", group: "Help", title: "How Basalt handles data", description: "How Basalt stores, copies, protects and checks your data, in plain terms.", body: `
 - **Columnar storage.** The warehouse stores data by column and compresses it, so totals over millions of rows stay fast.
 - **Read-only sources.** Every source session is opened as read-only, and sync reads run in a single consistent snapshot on PostgreSQL.
+- **Fast repeated reads.** A read that has already run is answered from memory until the warehouse changes, and for at most five minutes. Each viewer's answers are kept apart and end when their access changes. After a sync or a build, dashboards are read ahead of time. Admins can see this under **Settings**, in **Query performance**.
 - **Incremental sync.** A cursor column records how far the last sync got. The next sync reads only newer rows and can update by primary key.
 - **Schema changes.** New columns are detected on each sync. Personal data waits for a rule, and other columns are added automatically.
 - **Nested data.** JSON, STRUCT, LIST and MAP keep their types through import and sync. Every field inside a column with no rule is checked for personal data on every row before it's stored.
 - **Safe XML.** Entity declarations are refused, so entities are never expanded and external files are never read. XML files are limited to 100 MB.
-- **Masking before storage.** Raw rows stay in memory. Only the masked result is written to the warehouse file.
+- **Masking before storage.** Raw rows stay in memory during a sync. If a large sync has to spill to disk, those temporary files are encrypted, as long as the server could load DuckDB's httpfs extension. The server log warns if it couldn't. Only the masked result is written to the warehouse file.
 - **Dependency order.** Models build in dependency order. If one fails, the models that depend on it are skipped instead of using stale data.
 - **Data checks.** Never empty, unique, allowed values, and exists in another model. Failures are reported on the run.
 - **Sandboxed SQL.** SQL can't read server files or reach the network, and viewers can only run SELECT.
@@ -1141,7 +1146,9 @@ These apply to everyone in the workspace.
 | Too many attempts | Wait a few minutes, then sign in again |
 | Held back on a column | Choose a rule in [Personal data](/docs/personal-data) |
 | Row counts differ | Run a full sync. If it continues, check the cursor column |
-| Incremental tables need a cursor column | Choose one on the pipeline. Without it, every row is read on each sync |
+| Adding new rows needs a cursor column | Choose one on the pipeline. Without it, the table won't sync |
+| The cursor column is held back or left out | Choose a rule that keeps it, or another cursor column |
+| The primary key can't update rows with this rule | Keep it as is or replace it with a code |
 | «#ERROR» in a base | Hover over the cell to see why, then fix the formula |
 | Real-time sync stopped | Ask whoever runs the worker to restart it. It catches up from where it stopped |
 | A sync of this pipeline is running | Real-time changes wait until the sync finishes. Nothing is lost |

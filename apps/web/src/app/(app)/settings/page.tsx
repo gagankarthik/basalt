@@ -64,6 +64,24 @@ function LineageSettings() {
   </div></section>;
 }
 
+type QueryStats = { hits: number; misses: number; skipped: number; hitRate: number; entries: number; bytes: number; maxBytes: number; waiting: number; warmed: number; warmedAt?: string; slowest: { sql: string; runs: number; maxMs: number; avgMs: number }[] };
+function QueryPerformance() {
+  const [s, setS] = useState<QueryStats | null>(null), [failed, setFailed] = useState(false);
+  useEffect(() => { call<QueryStats>("/api/analytics").then(setS, () => setFailed(true)); }, []);
+  const mb = (n: number) => `${(n / 1048576).toFixed(n < 10485760 ? 1 : 0)} MB`;
+  return <section id="set-queries" className="set-row"><div><h2>Query performance</h2><p>Since the server last started. Repeated reads are answered from memory until the data changes.</p></div><div className="set-fields">
+    {failed ? <p className="muted small">This couldn&apos;t load.</p> : !s ? <LoadingTable rows={2} label="Loading query performance" /> : <>
+      <dl className="kv">
+        <dt>Answered from memory</dt><dd>{s.hits + s.misses ? `${Math.round(s.hitRate * 100)}% of ${(s.hits + s.misses).toLocaleString("en-US")} reads` : "No reads yet"}</dd>
+        <dt>Memory used</dt><dd>{mb(s.bytes)} of {mb(s.maxBytes)}, {s.entries.toLocaleString("en-US")} results</dd>
+        <dt>Queries waiting</dt><dd>{s.waiting}</dd>
+        <dt>Dashboards prepared</dt><dd>{s.warmedAt ? `${s.warmed} visuals, ${when(s.warmedAt)}` : "Not since the server started"}</dd>
+      </dl>
+      {s.slowest.length > 0 && <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Slowest queries</th><th className="r">Runs</th><th className="r">Slowest</th><th className="r">Average</th></tr></thead><tbody>{s.slowest.map((q) => <tr key={q.sql}><td className="mono small cell-clip" title={q.sql}>{q.sql}</td><td className="r">{q.runs}</td><td className="r num">{q.maxMs.toLocaleString("en-US")} ms</td><td className="r num">{q.avgMs.toLocaleString("en-US")} ms</td></tr>)}</tbody></table></div>}
+    </>}
+  </div></section>;
+}
+
 function SalesRequests() {
   const [rows, setRows] = useState<SalesRequest[] | null>(null);
   useEffect(() => { call<{ sales: SalesRequest[] }>("/api/admin").then((r) => setRows(r.sales)).catch(() => setRows([])); }, []);
@@ -89,10 +107,11 @@ export default function Settings() {
     <>
       <PageHead title="Settings" />
       <div className="body set">
-        <nav className="set-nav" aria-label="Settings sections">{[["workspace", "Workspace"], ...(can("admin") ? [["alerts", "Alerts"], ["email", "Email server"], ["lineage", "OpenLineage"], ["sales", "Sales requests"]] : []), ["appearance", "Appearance"], ["numbers", "Numbers and dates"]].map(([id, l]) => <a key={id} href={`#set-${id}`}>{l}</a>)}</nav>
+        <nav className="set-nav" aria-label="Settings sections">{[["workspace", "Workspace"], ...(can("admin") ? [["alerts", "Alerts"], ["email", "Email server"], ["queries", "Query performance"], ["lineage", "OpenLineage"], ["sales", "Sales requests"]] : []), ["appearance", "Appearance"], ["numbers", "Numbers and dates"]].map(([id, l]) => <a key={id} href={`#set-${id}`}>{l}</a>)}</nav>
         <section id="set-workspace" className="set-row"><div><h2>Workspace</h2><p>The name people see across Basalt.</p></div><div className="set-fields"><Field label="Workspace name"><input disabled={off} className="input" value={s.workspace} onChange={(e) => set({ workspace: e.target.value })} /></Field></div></section>
         {can("admin") && <AlertSettings />}
         {can("admin") && <EmailServer />}
+        {can("admin") && <QueryPerformance />}
         {can("admin") && <LineageSettings />}
         {can("admin") && <SalesRequests />}
         <section id="set-appearance" className="set-row"><div><h2>Appearance</h2><p>The accent color, theme and spacing.</p></div><div className="set-fields">

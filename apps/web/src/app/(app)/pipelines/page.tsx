@@ -7,6 +7,7 @@ import DataTable from "@/components/DataTable";
 import { Icon } from "@/components/icons";
 import { Btn, Empty, Field, GoLink, Modal, PageHead, SectionHead, Sel, Spinner, StatusBadge, LoadingTable, toast } from "@/components/ui";
 import { call, refreshTables, useApp, when } from "@/lib/client";
+import { keyRuleProblem } from "@/lib/syncPlan";
 import type { Pipeline, Run, StreamCfg, SyncMode } from "@/lib/types";
 
 const MODES: [SyncMode, string][] = [["full_refresh", "Full refresh: replace the copy"], ["incremental_append", "Incremental: add new rows"], ["incremental_dedupe", "Incremental: add and update by key"]];
@@ -92,7 +93,9 @@ function Detail({ p }: { p: Pipeline }) {
               { id: "cursor", header: "Cursor column", width: 170, sortValue: (r) => r.s.cursor ?? "", cell: (r) => (r.s.mode !== "full_refresh" ? <Sel disabled={!editable} aria-label={`Cursor column for ${r.name}`} options={[["", "Choose a column"], ...r.cols.map((c): [string, string] => [c, c])]} value={r.s.cursor ?? ""} onChange={(v) => ensure(r.name, { cursor: v || undefined })} /> : <span className="faint">Not needed</span>) },
               { id: "key", header: "Primary key", width: 170, sortValue: (r) => r.s.primaryKey ?? "", cell: (r) => (r.s.mode === "incremental_dedupe" ? <Sel disabled={!editable} aria-label={`Primary key for ${r.name}`} options={[["", "Choose a column"], ...r.cols.map((c): [string, string] => [c, c])]} value={r.s.primaryKey ?? ""} onChange={(v) => ensure(r.name, { primaryKey: v || undefined })} /> : <span className="mono small">{r.s.primaryKey ?? ""}</span>) },
             ]} />}
-          {p.streams.some((s) => s.enabled && s.mode !== "full_refresh" && !s.cursor) && <div className="banner warn" style={{ marginTop: 8 }}><Icon name="warn" />Incremental tables need a cursor column. Without one, every row is read on each sync.</div>}
+          {conn?.type !== "airbyte" && p.streams.some((s) => s.enabled && s.mode === "incremental_append" && !s.cursor) && <div className="banner warn" style={{ marginTop: 8 }}><Icon name="warn" />Adding new rows needs a cursor column. Without one, that table won&apos;t sync, because it would add every row again.</div>}
+          {conn?.type !== "airbyte" && p.streams.some((s) => s.enabled && s.mode === "incremental_dedupe" && !s.cursor) && <div className="banner warn" style={{ marginTop: 8 }}><Icon name="warn" />Without a cursor column, adding and updating by key reads every row on each sync.</div>}
+          {p.streams.filter((s) => s.enabled && s.mode === "incremental_dedupe" && s.primaryKey).map((s) => { const why = keyRuleProblem(s.primaryKey!, s.rules[s.primaryKey!]); return why && <div key={s.name} className="banner warn" style={{ marginTop: 8 }}><Icon name="warn" />{s.name}: {why}</div>; })}
           {p.streams.some((s) => s.enabled && s.mode === "incremental_dedupe" && !s.primaryKey) && <div className="banner warn" style={{ marginTop: 8 }}><Icon name="warn" />Add and update needs a primary key. Without one, updated rows are added as duplicates.</div>}
         </section>
         {conn?.type === "postgres" && <RealTime p={p} />}

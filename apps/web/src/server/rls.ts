@@ -1,6 +1,7 @@
 import "server-only";
 import type { DuckDBConnection } from "@duckdb/node-api";
 import { applyRowSecurity, checkViewerRead } from "@/lib/rowSecurity";
+import { scopeKey } from "@/lib/queryCache";
 import { stageOf, viewerMayRead } from "@/lib/semantic";
 import { HttpError } from "./auth";
 import { getConfig, getRevoked, getRls } from "./files";
@@ -13,6 +14,12 @@ const limitsOf = (id: string) => ({
   revoked: new Set(getRevoked().filter((r) => r.userId === id).map((r) => r.table)),
   anyStage: Object.values(getConfig().semantic?.viewerStages ?? {}).some((v) => v === false),
 });
+/** Everything that decides what this person may read, for keeping cached answers apart. */
+export function accessScope(user: { id: string; role: string }) {
+  if (user.role !== "viewer") return scopeKey(user, null);
+  const { rules, revoked } = limitsOf(user.id), cfg = getConfig();
+  return scopeKey(user, { rules, revoked: [...revoked].sort(), stages: cfg.semantic?.viewerStages ?? null, models: cfg.models.map((m) => m.name).sort() });
+}
 /** A viewer who can't read every row of every table, so what's sent to them mustn't describe the rest. */
 export function isLimited(user: { id: string; role: string }) {
   const l = limitsOf(user.id);

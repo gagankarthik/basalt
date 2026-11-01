@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { DuckDBInstance, StatementType, type DuckDBConnection } from "@duckdb/node-api";
 import { createGate } from "@/lib/gate";
-import { kindOf, q } from "@/lib/sql";
+import { kindOf, lit, q } from "@/lib/sql";
 import type { Result } from "@/lib/types";
 
 // Must stay opaque to the bundler. If it can work out this folder, it lists every file in it for the build, which fails on locked
@@ -18,11 +18,30 @@ const g = globalThis as unknown as { __basalt?: G };
 const cache: G = (g.__basalt ??= {});
 const gate = (cache.gate ??= createGate());
 
+/**
+ * Under memory pressure DuckDB spills even TEMP tables to disk, and raw rows sit in those during a sync, so spilled files are encrypted.
+ * The memory limit is optional, for a server shared with other work: BASALT_MEMORY_LIMIT=8GB. DuckDB's default is 80% of the machine.
+ */
+async function hardened(db: DuckDBInstance) {
+  const c = await db.connect();
+  try {
+    // Encrypting needs httpfs's crypto, loaded before the warehouse locks. Without it DuckDB refuses to spill at all, and a large sync would fail, so it stays off with a warning
+    try {
+      await c.run("LOAD httpfs").catch(() => c.run("INSTALL httpfs; LOAD httpfs"));
+      await c.run("SET GLOBAL temp_file_encryption = true");
+    } catch (e) { console.warn("Basalt couldn't turn on encryption for spilled temp files, so a very large sync may write raw rows to the temp folder until it ends:", e); }
+    if (process.env.BASALT_MEMORY_LIMIT) await c.run(`SET GLOBAL memory_limit = ${lit(process.env.BASALT_MEMORY_LIMIT)}`);
+  } finally { c.closeSync(); }
+  return db;
+}
+/** A scratch database for reading a source. It can hold raw rows too, so it gets the same protection. */
+export const scratchDb = async () => hardened(await DuckDBInstance.create(":memory:"));
+
 async function open(file: string) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   // A process that has just ended can hold the file for a moment on Windows
   for (let wait = 0; ; wait += 500) {
-    try { return await DuckDBInstance.create(dataPath(file)); } catch (e) {
+    try { return await hardened(await DuckDBInstance.create(dataPath(file))); } catch (e) {
       if (wait >= 30000 || !/cannot open|being used|lock/i.test(String(e))) throw e;
       await new Promise((r) => setTimeout(r, 500));
     }

@@ -1,11 +1,12 @@
 import "server-only";
+import { scratchDb } from "./engine";
 import { assertHostedAllowed } from "@/lib/hosted";
 import { gcsToken, roleCredentials } from "./sources/common";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DuckDBInstance, type DuckDBConnection } from "@duckdb/node-api";
+import type { DuckDBConnection } from "@duckdb/node-api";
 import { lit, q } from "@/lib/sql";
 import { asTextSql } from "@/lib/nested";
 import { MAX_XML_BYTES, XML_TOO_LARGE, xmlRows } from "@/lib/xml";
@@ -22,7 +23,7 @@ type Stream = { format: string; paths: string[] };
 /** A throwaway engine with network access. It's separate from the warehouse, which stays locked, and user SQL never reaches it. */
 export async function openGateway(conn?: Connection, secret?: string) {
   if (conn) await assertHostedAllowed(conn, secret);
-  const db = await DuckDBInstance.create(":memory:");
+  const db = await scratchDb();
   const c = await db.connect();
   await c.run("INSTALL httpfs; LOAD httpfs;");
   if (conn?.type === "azure") {
