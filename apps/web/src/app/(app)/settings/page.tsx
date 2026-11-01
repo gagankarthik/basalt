@@ -14,7 +14,7 @@ function EmailServer() {
   const [s, setS] = useState<Smtp>({ host: "", port: 587, user: "", from: "", secure: false, password: "" }), [tried, setTried] = useState(false);
   useEffect(() => { call<{ smtp?: Smtp | null }>("/api/alerts").then((r) => { if (r.smtp) setS({ ...r.smtp, password: "" }); }); }, []);
   const go = async (action: string) => { setTried(true); if (!s.host.trim() || !/^\S+@\S+|<\S+@\S+>/.test(s.from)) return; try { const r = await call<{ sentTo?: string }>("/api/alerts", { json: { ...s, action } }); toast(r.sentTo ? `Test email sent to ${r.sentTo}` : "Email server saved"); } catch (e) { toast((e as Error).message, true); } };
-  return <section className="set-row"><div><h2>Email server</h2><p>Used for report subscriptions, alerts and automation emails. Basalt sends through your own mail server.</p></div><div className="set-fields">
+  return <section id="set-email" className="set-row"><div><h2>Email server</h2><p>Used for report subscriptions, alerts and automation emails. Basalt sends through your own mail server.</p></div><div className="set-fields">
     <div className="form-row"><Field label="Server" error={tried && !s.host.trim() ? "Enter the mail server." : undefined}><input className="input" placeholder="smtp.yourcompany.com" value={s.host} onChange={(e) => setS({ ...s, host: e.target.value })} /></Field><Field label="Port"><input className="input" type="number" value={s.port} onChange={(e) => setS({ ...s, port: Number(e.target.value) })} /></Field></div>
     <div className="form-row"><Field label="User"><input className="input" autoComplete="off" value={s.user} onChange={(e) => setS({ ...s, user: e.target.value })} /></Field><Field label="Password" hint="Leave empty to keep the saved one."><input className="input" type="password" autoComplete="new-password" value={s.password ?? ""} onChange={(e) => setS({ ...s, password: e.target.value })} /></Field></div>
     <Field label="Send from" error={tried && !/\S+@\S+/.test(s.from) ? "Enter an email address." : undefined}><input className="input" placeholder="reports@yourcompany.com" value={s.from} onChange={(e) => setS({ ...s, from: e.target.value })} /></Field>
@@ -29,7 +29,7 @@ function AlertSettings() {
   useEffect(() => { call<{ settings?: Alerts }>("/api/alerts").then((r) => setA(r.settings ?? null)).catch(() => {}); }, []);
   if (!a) return null;
   const send = async (action: string, done: string) => { try { await call("/api/alerts", { json: { ...a, action } }); toast(done); } catch (e) { toast((e as Error).message, true); } };
-  return <section className="set-row"><div><h2>Alerts</h2><p>What raises an alert, and where it&apos;s sent.</p></div><div className="set-fields">
+  return <section id="set-alerts" className="set-row"><div><h2>Alerts</h2><p>What raises an alert, and where it&apos;s sent.</p></div><div className="set-fields">
     <div className="field"><span className="lab">Alert me when</span>{ALERT_TYPES.map(([k, l]) => <label key={k} className="check"><input type="checkbox" checked={!!a[k]} onChange={(e) => setA({ ...a, [k]: e.target.checked })} />{l}</label>)}</div>
     <Field label="Send alerts to a webhook" hint="Works with Slack, Microsoft Teams and other tools that accept webhooks. Alerts always appear under the bell."><input className="input" type="url" placeholder="https://hooks.slack.com/services/..." value={a.webhook} onChange={(e) => setA({ ...a, webhook: e.target.value })} /></Field>
     <div style={{ display: "flex", gap: 8 }}><Btn variant="primary" onClick={() => send("save", "Alert settings saved")}>Save alerts</Btn><Btn disabled={!a.webhook} onClick={() => send("test", "Test alert sent")}>Send a test alert</Btn></div>
@@ -49,7 +49,7 @@ function LineageSettings() {
     try { setD(await call<Lineage>("/api/openlineage", { json: { ...s, apiKey, action } })); if (action === "save") setKey(""); toast(done); }
     catch (e) { toast((e as Error).message, true); call<Lineage>("/api/openlineage").then((r) => setD({ ...r, settings: s })).catch(() => {}); }
   };
-  return <section className="set-row"><div><h2>OpenLineage</h2></div><div className="set-fields">
+  return <section id="set-lineage" className="set-row"><div><h2>OpenLineage</h2></div><div className="set-fields">
     <div className="form-row">
       <Field label="Send run events to"><Sel options={[["none", "Nowhere"], ["http", "HTTP endpoint"], ["file", "File in the data folder"]]} value={s.transport} onChange={(v) => set({ transport: v })} /></Field>
       <Field label="Namespace"><input className="input" value={s.namespace} onChange={(e) => set({ namespace: e.target.value })} /></Field>
@@ -67,7 +67,7 @@ function LineageSettings() {
 function SalesRequests() {
   const [rows, setRows] = useState<SalesRequest[] | null>(null);
   useEffect(() => { call<{ sales: SalesRequest[] }>("/api/admin").then((r) => setRows(r.sales)).catch(() => setRows([])); }, []);
-  return <section className="set-row"><div><h2>Sales requests</h2><p>Requests sent from the Talk to sales page.</p></div><div className="set-fields">
+  return <section id="set-sales" className="set-row"><div><h2>Sales requests</h2><p>Requests sent from the Talk to sales page.</p></div><div className="set-fields">
     {!rows ? <LoadingTable rows={2} label="Loading requests" /> : <DataTable<SalesRequest> id="sales-requests" rows={rows} rowKey={(r) => r.id} selectable={false} exportable exportName="sales-requests" searchPlaceholder="Search requests" initialSort={{ id: "at", dir: "desc" }} empty={<Empty compact icon="people" title="No sales requests yet">Requests from the Talk to sales page appear here.</Empty>}
       filters={[{ id: "size", label: "Team size", value: (r) => r.teamSize }]}
       columns={[
@@ -89,19 +89,20 @@ export default function Settings() {
     <>
       <PageHead title="Settings" />
       <div className="body set">
-        <section className="set-row"><div><h2>Workspace</h2><p>The name people see across Basalt.</p></div><div className="set-fields"><Field label="Workspace name"><input disabled={off} className="input" value={s.workspace} onChange={(e) => set({ workspace: e.target.value })} /></Field></div></section>
+        <nav className="set-nav" aria-label="Settings sections">{[["workspace", "Workspace"], ...(can("admin") ? [["alerts", "Alerts"], ["email", "Email server"], ["lineage", "OpenLineage"], ["sales", "Sales requests"]] : []), ["appearance", "Appearance"], ["numbers", "Numbers and dates"]].map(([id, l]) => <a key={id} href={`#set-${id}`}>{l}</a>)}</nav>
+        <section id="set-workspace" className="set-row"><div><h2>Workspace</h2><p>The name people see across Basalt.</p></div><div className="set-fields"><Field label="Workspace name"><input disabled={off} className="input" value={s.workspace} onChange={(e) => set({ workspace: e.target.value })} /></Field></div></section>
         {can("admin") && <AlertSettings />}
         {can("admin") && <EmailServer />}
         {can("admin") && <LineageSettings />}
         {can("admin") && <SalesRequests />}
-        <section className="set-row"><div><h2>Appearance</h2><p>The accent color, theme and spacing.</p></div><div className="set-fields">
+        <section id="set-appearance" className="set-row"><div><h2>Appearance</h2><p>The accent color, theme and spacing.</p></div><div className="set-fields">
           <div className="field"><span className="lab">Accent color</span><div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>{ACCENTS.map(([c, n]) => <button key={c} disabled={off} aria-label={n} aria-pressed={s.accent === c} title={n} onClick={() => set({ accent: c })} style={{ width: 28, height: 28, borderRadius: 4, background: c, border: s.accent === c ? "2px solid var(--ink)" : "1px solid var(--line-2)", cursor: "pointer" }} />)}<label className="check small">Custom <input disabled={off} type="color" aria-label="Custom accent color" value={s.accent} onChange={(e) => set({ accent: e.target.value })} /></label></div></div>
           <div className="form-row">
             <Field label="Default theme" hint="For browsers where nobody has chosen a theme from the top bar."><Sel disabled={off} options={[["system", "Match my device"], ["light", "Light"], ["dark", "Dark"]]} value={s.theme} onChange={(v) => set({ theme: v as S["theme"] })} /></Field>
             <Field label="Density"><Sel disabled={off} options={[["compact", "Compact"], ["regular", "Regular"]]} value={s.density} onChange={(v) => set({ density: v as S["density"] })} /></Field>
           </div>
         </div></section>
-        <section className="set-row"><div><h2>Numbers and dates</h2><p>How values appear in tables and dashboards.</p></div><div className="set-fields">
+        <section id="set-numbers" className="set-row"><div><h2>Numbers and dates</h2><p>How values appear in tables and dashboards.</p></div><div className="set-fields">
           <div className="form-row">
             <Field label="Currency"><Sel disabled={off} options={[["USD", "US dollar"], ["CAD", "Canadian dollar"], ["EUR", "Euro"], ["GBP", "British pound"], ["AUD", "Australian dollar"]]} value={s.currency} onChange={(v) => set({ currency: v })} /></Field>
             <Field label="Number format"><Sel disabled={off} options={[["en-US", "1,234,567.50 (US)"], ["en-GB", "1,234,567.50 (UK)"], ["de-DE", "1.234.567,50 (Europe)"]]} value={s.locale} onChange={(v) => set({ locale: v })} /></Field>

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import DataTable from "@/components/DataTable";
 import { Icon } from "@/components/icons";
 import { Btn, ErrorState, GoLink, LoadingTable, Empty, PageHead, StatusBadge, Tabs, toast } from "@/components/ui";
-import { call, useApp, when } from "@/lib/client";
+import { call, took, useApp, when } from "@/lib/client";
 import type { LogMessage, Run, StreamStat } from "@/lib/types";
 
 type Res = { unique_id: string; status: string; message?: string; execution_time: number; failures?: number };
@@ -90,6 +90,7 @@ function Runs() {
         { id: "type", header: "Type", width: 110, sortValue: (r) => KINDS[r.kind], cell: (r) => KINDS[r.kind] },
         { id: "status", header: "Status", width: 130, sortValue: (r) => r.status, cell: (r) => <StatusBadge s={r.status} /> },
         { id: "started", header: "Started", width: 170, sortValue: (r) => r.startedAt, cell: (r) => when(r.startedAt) },
+        { id: "took", header: "Took", width: 90, align: "end", sortValue: (r) => (r.endedAt ? Date.parse(r.endedAt) - Date.parse(r.startedAt) : 0), cell: (r) => took(r.startedAt, r.endedAt) },
         { id: "summary", header: "Summary", width: 520, sortValue: (r) => r.summary ?? "", searchValue: (r) => r.summary ?? "", cell: (r) => <span className="small">{r.summary}</span> },
       ]} />}</div>
   </>;

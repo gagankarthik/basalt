@@ -89,7 +89,7 @@ function Models() {
           <button onClick={() => { close(); setSelecting(true); }}><Icon name="filter" />Build selection</button>
         </div>}</Pop></span></>}
       </PageHead>
-      <Tabs tabs={editable ? ["Models", "Lineage", "Project"] : ["Models", "Lineage"]} value={tab === "Lineage" || tab === "Project" ? tab : "Models"} onChange={(v) => setTab(v === "Models" ? "SQL" : v)} />
+      <Tabs tabs={[...(m ? [["SQL", mk === "steps" ? "Query" : mk === "python" ? "Python" : mk === "seed" ? "CSV" : "SQL"] as [string, string], "Preview", "Checks", ...(mk === "python" ? [] : ["Settings"]), "Documentation"] : [["SQL", "Models"] as [string, string]]), "Lineage", ...(editable ? ["Project"] : [])]} value={tab} onChange={setTab} />
       {tab === "Project" ? <ProjectPanel models={models} /> : tab === "Lineage" ? <div className="body"><Lineage models={models} selected={m?.name} onPick={(n) => { setSel(models.find((x) => x.name === n)?.id); setTab("SQL"); }} /></div> : (
         !models.length ? <Empty icon="model" title="Create your first model" editor action={<Btn variant="primary" icon="plus" onClick={() => { setName(""); setKind("sql"); setAdding(true); }}>New model</Btn>}>Write SQL or Python, or build steps without code. Basalt builds them in dependency order and runs your checks.</Empty> : <Split id="models" width={240} label="Models">
           <aside className="tree">{models.map((x) => <button key={x.id} className={x.id === sel ? "on" : ""} onClick={() => setSel(x.id)}><Icon name={x.kind === "python" ? "code" : x.kind === "steps" ? "flow" : x.materialized === "view" || x.materialized === "ephemeral" ? "eye" : "table"} size={14} /><span>{x.name}</span>{statusOf(x.name) && statusOf(x.name) !== "success" && <span style={{ marginLeft: "auto" }}><StatusBadge s={statusOf(x.name)!} /></span>}</button>)}</aside>
@@ -106,7 +106,6 @@ function Models() {
                 <div className="grow" />
                 {editable && <MoreMenu label="Model actions">{(close) => <button onClick={() => { close(); setDel(true); }}><Icon name="trash" />Delete {m.name}</button>}</MoreMenu>}
               </div>
-              <Tabs tabs={[["SQL", mk === "steps" ? "Query" : mk === "python" ? "Python" : mk === "seed" ? "CSV" : "SQL"], "Preview", "Checks", ...(mk === "python" ? [] : ["Settings"]), "Documentation"]} value={tab} onChange={setTab} />
               {err && <div className="banner bad" style={{ margin: 12 }}><Icon name="warn" /><span className="mono">{err}</span></div>}
               {tab === "SQL" && mk === "seed" && <SeedEditor m={m} set={up} disabled={!editable} />}
               {tab === "Settings" && <ModelSettings m={m} set={up} disabled={!editable} admin={can("admin")} />}

@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import DataTable from "@/components/DataTable";
 import { Icon } from "@/components/icons";
-import { Btn, Empty, ErrorState, Field, LoadingTable, Modal, PageHead, toast } from "@/components/ui";
+import { GoLink, Btn, Empty, ErrorState, Field, LoadingTable, Modal, PageHead, toast } from "@/components/ui";
 import type { AppSummary } from "@/lib/apps";
 import { call, useApp, useNewHandler, when } from "@/lib/client";
 import { STATUS_LABEL, STATUS_TONE } from "./AppEditor";
@@ -19,7 +19,7 @@ export default function Apps() {
   return <>
     <PageHead title="Apps">{author && !!items?.length && <Btn icon="plus" variant="primary" onClick={open}>New app</Btn>}</PageHead>
     <div className="body">
-      {error ? <ErrorState retry={load}>{error}</ErrorState> : !items ? <LoadingTable /> : !items.length ? <Empty icon="apps" title={author ? "No apps yet" : "No apps have been shared with you"} action={author ? <Btn variant="primary" icon="plus" onClick={open}>New app</Btn> : undefined}>{author ? "An app packages dashboards and links for the people who read them. Create one and choose its pages." : "Apps you can open appear here once someone shares one with you."}</Empty> : (
+      {error ? <ErrorState retry={load}>{error}</ErrorState> : !items ? <LoadingTable /> : !items.length ? <Empty icon="apps" title={author ? "No apps yet" : "No apps have been shared with you"} action={author ? <><Btn variant="primary" icon="plus" onClick={open}>New app</Btn><GoLink href="/docs/apps">How apps work</GoLink></> : undefined}>{author ? "An app packages dashboards and links for the people who read them. Create one and choose its pages." : "Apps you can open appear here once someone shares one with you."}</Empty> : (
         <DataTable<AppSummary> id="apps" rows={items} rowKey={(a) => a.id} selectable={false} searchPlaceholder="Search apps" onRowClick={(a) => router.push(`/apps/${a.id}`)} initialSort={{ id: "name", dir: "asc" }}
           columns={[
             // eslint-disable-next-line @next/next/no-img-element

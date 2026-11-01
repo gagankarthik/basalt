@@ -107,8 +107,8 @@ export default function Flow() {
           {!g && <div className="banner bad"><Icon name="warn" />The models can&apos;t be drawn because a model refers to something missing or models depend on each other.</div>}
           <div className="fl-main">
             <div className="fl-scroll"><FlowGraph nodes={nodes} edges={edges} selected={node?.id} onPick={setSel} /></div>
-            <aside className="fl-panel" aria-label="Details">
-              <div className="fl-panel-head"><h2>{node ? node.name : "Flow details"}</h2>{node && <Btn icon="x" variant="ghost" aria-label="Clear selection" onClick={() => setSel(undefined)} />}</div>
+            {node && <aside className="fl-panel" aria-label="Details">
+              <div className="fl-panel-head"><h2>{node.name}</h2><Btn icon="x" variant="ghost" aria-label="Clear selection" onClick={() => setSel(undefined)} /></div>
               <dl className="kv">
                 {d.rows.map(([k, v]) => <div key={k} style={{ display: "contents" }}><dt>{k}</dt><dd>{v}</dd></div>)}
                 {reads.length > 0 && <><dt>Reads from</dt><dd>{refs(reads)}</dd></>}
@@ -117,10 +117,10 @@ export default function Flow() {
               {d.note && <p className="small muted">{d.note}</p>}
               <div className="fl-panel-foot">
                 {d.link && <GoLink href={d.link[1]}>{d.link[0]}</GoLink>}
-                {editable && (!node || model) && <Btn disabled={!model || busy} icon="play" onClick={buildFrom}>{model ? `Build ${model.name} and what depends on it` : "Select a model to build from it"}</Btn>}
+                {editable && model && <Btn disabled={busy} icon="play" onClick={buildFrom}>{`Build ${model.name} and what depends on it`}</Btn>}
                 {editable && stopping && <Btn variant="danger" icon="trash" onClick={() => stopExport(stopping)}>Stop this export</Btn>}
               </div>
-            </aside>
+            </aside>}
           </div>
           <section className="fl-below">
             <div className="fl-below-head">

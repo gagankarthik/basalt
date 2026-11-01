@@ -94,7 +94,7 @@ export default function SqlEditor() {
           <CodeMirror value={tab.text} onChange={setText} extensions={extensions} height="100%" style={{ height: "100%" }} theme={dark ? "dark" : "light"} aria-label="SQL editor" basicSetup={{ highlightActiveLine: false }} />
         </div>
         {err && <div className="banner bad" style={{ margin: 12, whiteSpace: "pre-wrap" }} role="alert"><Icon name="warn" /><span className="mono">{err}</span></div>}
-        {!res && !err && !running && <Empty icon="code" title="Run a query to see results" action={<Btn variant="primary" icon="play" onClick={() => run()}>Run query</Btn>}>Results can be viewed as a table or a chart. Ctrl+Enter also runs it.</Empty>}
+        {!res && !err && !running && <Empty icon="code" title="Run a query to see results">Results can be viewed as a table or a chart. Ctrl+Enter also runs it.</Empty>}
         {res && <div className="fill">
           <Tabs tabs={["Results", "Chart"]} value={view} onChange={setView} />
           {view === "Results" ? <ResultGrid result={res} /> : <div className="fill" style={{ padding: 12, minHeight: 300 }}>

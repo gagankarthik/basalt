@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import { Empty, ErrorState, FlowStrip, GoLink, LoadingTable, PageHead, SectionHead, StatusBadge, Sk, Spinner, toast } from "@/components/ui";
 import { call, requestNew, took, useApp, useTables, when } from "@/lib/client";
 import { canLoadSample } from "@/lib/onboarding";
+import { groupRuns } from "@/lib/runGroups";
 import type { Run } from "@/lib/types";
 
 /** Every way to get data in, for a workspace that has none yet. Everything here stays on this server. */
@@ -31,7 +32,8 @@ export default function Home() {
   useEffect(() => { loadRuns(); try { setRecents(JSON.parse(localStorage.getItem("basalt-recents") ?? "[]")); } catch { /* storage may be blocked */ } }, []);
 
   const lastSync = (id: string) => runs?.find((r) => r.kind === "sync" && r.refId === id);
-  const held = config.pipelines.flatMap((p) => lastSync(p.id)?.streams?.flatMap((s) => s.heldBack) ?? []);
+  // The last sync says what it left out; a rule chosen since then has already dealt with that column
+  const held = config.pipelines.flatMap((p) => lastSync(p.id)?.streams?.flatMap((s) => s.heldBack.filter((col) => !p.streams.find((x) => x.name === s.name)?.rules[col])) ?? []);
   // Home is a summary: what's broken first, then what ran last. The rest is one link away
   const unhealthy = (id: string) => (["failed", "partial"].includes(lastSync(id)?.status ?? "") ? 1 : 0);
   const topPipelines = [...config.pipelines].sort((a, b) => unhealthy(b.id) - unhealthy(a.id) || String(lastSync(b.id)?.startedAt ?? "").localeCompare(String(lastSync(a.id)?.startedAt ?? ""))).slice(0, 5);
@@ -65,7 +67,7 @@ export default function Home() {
             <section>
               <SectionHead title="Recent runs"><GoLink href="/runs">All runs</GoLink></SectionHead>
               {failed ? null : !runs ? <LoadingTable rows={5} cols={4} label="Loading runs" /> : !runs.length ? <Empty compact icon="refresh" title="No runs yet" editor action={config.pipelines.length > 0 && <Link className="btn primary" href="/pipelines">Run a sync</Link>}>Syncs and model builds appear here after they run.</Empty> : <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Job</th><th>Status</th><th className="hide-sm">Result</th><th>Started</th><th className="hide-sm">Took</th></tr></thead><tbody>
-                {runs.slice(0, 6).map((r) => <tr key={r.id} className="click" onClick={() => router.push(`/runs?r=${r.id}`)}><td>{r.name}</td><td><StatusBadge s={r.status} /></td><td className="hide-sm muted cell-clip" title={r.summary ?? undefined}>{r.summary}</td><td>{when(r.startedAt)}</td><td className="hide-sm num">{took(r.startedAt, r.endedAt)}</td></tr>)}
+                {groupRuns(runs).slice(0, 6).map((r) => <tr key={r.id} className="click" onClick={() => router.push(`/runs?r=${r.id}`)}><td>{r.name}{r.count > 1 && <span className="muted small"> {r.count} runs, latest shown</span>}</td><td><StatusBadge s={r.status} /></td><td className="hide-sm muted cell-clip" title={r.summary ?? undefined}>{r.summary}</td><td>{when(r.startedAt)}</td><td className="hide-sm num">{took(r.startedAt, r.endedAt)}</td></tr>)}
               </tbody></table></div>}
             </section>
           </div>

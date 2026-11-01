@@ -243,7 +243,13 @@ function Explore() {
           {(view.layout === "board" || view.layout === "grid") && <Field label="Group by"><Sel aria-label="Group by" options={[["", "No grouping"], ...allCols.map((c): [string, string] => [c.name, `Group: ${c.label}`])]} value={view.groupBy ?? ""} onChange={(v) => up({ groupBy: v || undefined })} /></Field>}
           {(view.layout === "board" || view.layout === "gallery") && <Field label="Card title"><Sel aria-label="Card title" options={[["", "Automatic"], ...allCols.map((c): [string, string] => [c.name, c.label ?? c.name])]} value={view.titleColumn ?? ""} onChange={(v) => up({ titleColumn: v || undefined })} /></Field>}
         </div></Pop>
-                <div className="grow keep" />
+        {info && <>
+        <input className="input keep" style={{ width: 200 }} type="search" placeholder="Search this table" aria-label="Search this table" value={typed} onChange={(e) => setTyped(e.target.value)} />
+        {chipCols.map((c) => { const f = view.filters.find((x) => x.column === c && x.op === "in"); return <FilterChip key={c} table={view.table} column={c} label={labelOf(c)} filter={f} onChange={(values) => up({ filters: values.length ? (f ? view.filters.map((x) => (x === f ? { ...x, values } : x)) : [...view.filters, { id: uid(), column: c, op: "in", values }]) : view.filters.filter((x) => x !== f) })} />; })}
+        {(view.filters.length > 0 || typed) && <button className="link small" onClick={() => { up({ filters: [] }); setTyped(""); setSearch(""); }}>Clear all</button>}
+        </>}
+        <div className="grow keep" />
+        {info && <span className="small muted num keep" role="status">{typed.trim() !== search || count == null ? (typed.trim() ? "Searching" : "Counting rows") : `${count.toLocaleString("en-US")} rows`}</span>}
         {adhoc && <Btn icon="save" variant="primary" onClick={() => { const saved = { ...adhoc, id: uid() }; patch((c) => ({ ...c, views: [...c.views, saved] })); setSel(saved.id); setAdhoc(null); toast("View saved"); }}>Save view</Btn>}
         <span className="keep"><MoreMenu label="View options">{(close) => <>
           <button onClick={() => { close(); setColoring(true); }}><Icon name="palette" />Color{view.colorRules.length ? ` (${view.colorRules.length})` : ""}</button>
@@ -253,12 +259,6 @@ function Explore() {
           <button onClick={() => { close(); const rest = views.filter((v) => v.id !== view.id); patch((c) => ({ ...c, views: rest })); setSel(rest[0]?.id ?? ""); toast(`Deleted ${view.name}`); }}><Icon name="trash" />Delete view</button></>}
         </>}</MoreMenu></span>
       </div>
-      {info && <div className={`fbar phone-fold ${tools ? "open" : ""}`}>
-        <input className="input keep" style={{ width: 200 }} type="search" placeholder="Search this table" aria-label="Search this table" value={typed} onChange={(e) => setTyped(e.target.value)} />
-        {chipCols.map((c) => { const f = view.filters.find((x) => x.column === c && x.op === "in"); return <FilterChip key={c} table={view.table} column={c} label={labelOf(c)} filter={f} onChange={(values) => up({ filters: values.length ? (f ? view.filters.map((x) => (x === f ? { ...x, values } : x)) : [...view.filters, { id: uid(), column: c, op: "in", values }]) : view.filters.filter((x) => x !== f) })} />; })}
-        {(view.filters.length > 0 || typed) && <button className="link small" onClick={() => { up({ filters: [] }); setTyped(""); setSearch(""); }}>Clear all</button>}
-        <span className="grow keep" /><span className="small muted num keep" role="status">{typed.trim() !== search || count == null ? (typed.trim() ? "Searching" : "Counting rows") : `${count.toLocaleString("en-US")} rows`}</span>
-      </div>}
       {error && <div className="banner bad" style={{ margin: 12 }}><Icon name="warn" />{error}</div>}
       {!tables ? <div className="body"><LoadingTable cols={6} label="Loading table" /></div> : !info ? <Empty icon="table" title={`Table ${view.table} isn't in the warehouse`} editor action={<a className="btn primary" href="/pipelines">Run a sync</a>}>Run the pipeline or models that create it, or delete this view from the menu above.</Empty>
         : view.layout === "grid" && view.groupBy ? <GroupedGrid view={view} cols={cols} base={base} order={order} labelOf={labelOf} find={search} menu={columnMenu} onSort={onSort} />

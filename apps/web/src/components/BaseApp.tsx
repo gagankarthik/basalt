@@ -171,6 +171,7 @@ function ViewControls({ c, search, setSearch, onAddRecord, views, onPick }: { c:
       <span className="keep"><SplitToggle /></span>
       <span className="bx-viewpick"><Pop width={240} trigger={(_, tog) => <Btn icon={VIEW_TYPES.find((x) => x[0] === v.type)![2]} onClick={tog}><span className="bx-vname">{v.name}</span><Icon name="chevDown" size={14} /></Btn>}>{(close) => <div className="menu">{views.map((x) => <button key={x.id} type="button" aria-current={x.id === v.id ? "true" : undefined} onClick={() => { close(); onPick(x.id); }}><Icon name={VIEW_TYPES.find((y) => y[0] === x.type)![2]} />{x.name}</button>)}</div>}</Pop></span>
     {v.type !== "form" && <>
+      <i className="bx-sep" aria-hidden="true" />
       <Pop width={620} trigger={(_, tog) => <Btn icon="filter" className={v.filters.length ? "on" : ""} onClick={tog}>{v.filters.length ? `Filter (${v.filters.length})` : "Filter"}</Btn>}><div className="bx-pop">
         {v.filters.length > 1 && <label className="bx-row small">Show records matching <Sel aria-label="Match" value={v.match} onChange={(m) => up({ match: m as "all" })} options={[["all", "all of these"], ["any", "any of these"]]} /></label>}
         {!v.filters.length && <p className="muted small">No filters. Every record is showing.</p>}
@@ -180,6 +181,7 @@ function ViewControls({ c, search, setSearch, onAddRecord, views, onPick }: { c:
         {!v.sorts.length && <p className="muted small">Records are in the order they were added.</p>}
         {v.sorts.map((s, i) => <div key={i} className="bx-sort"><Sel aria-label="Sort field" options={opts} value={s.field} onChange={(val) => up({ sorts: v.sorts.map((y, k) => (k === i ? { ...y, field: val } : y)) })} /><Sel aria-label="Direction" options={[["asc", "First to last"], ["desc", "Last to first"]]} value={s.dir} onChange={(val) => up({ sorts: v.sorts.map((y, k) => (k === i ? { ...y, dir: val as "asc" } : y)) })} /><Btn icon="x" variant="ghost" aria-label="Remove sort" onClick={() => up({ sorts: v.sorts.filter((_, k) => k !== i) })} /></div>)}
         <div><Btn icon="plus" onClick={() => up({ sorts: [...v.sorts, { field: t.fields[0].id, dir: "asc" }] })}>Add sort</Btn></div></div></Pop>
+      <i className="bx-sep" aria-hidden="true" />
       {v.type === "grid" && <Sel aria-label="Group by" className={`input ${v.groupBy ? "on" : ""}`} options={[["", "No grouping"], ...opts.map(([a, l]): [string, string] => [a, `Group: ${l}`])]} value={v.groupBy ?? ""} onChange={(val) => up({ groupBy: val || undefined })} />}
       <Pop width={280} trigger={(_, tog) => <Btn icon="eye" className={v.hidden.length ? "on" : ""} onClick={tog}>{v.hidden.length ? `${v.hidden.length} hidden` : "Hide fields"}</Btn>}><div className="bx-pop"><div className="bx-list">{hideable.map((f) => <label key={f.id} className="check"><input type="checkbox" checked={!v.hidden.includes(f.id)} onChange={(e) => up({ hidden: e.target.checked ? v.hidden.filter((x) => x !== f.id) : [...v.hidden, f.id] })} />{f.name}</label>)}</div><div className="bx-row"><Btn onClick={() => up({ hidden: hideable.map((f) => f.id) })}>Hide all</Btn><Btn onClick={() => up({ hidden: [] })}>Show all</Btn></div></div></Pop>
       {v.type === "kanban" && <Sel aria-label="Stack by" options={[["", "Choose a stack field"], ...stack.map((f): [string, string] => [f.id, `Stack: ${f.name}`])]} value={v.stackBy ?? ""} onChange={(val) => up({ stackBy: val || undefined })} />}
@@ -194,7 +196,7 @@ function ViewControls({ c, search, setSearch, onAddRecord, views, onPick }: { c:
         {stack.length > 0 && <FormField label="Color"><Sel aria-label="Color records" options={[["", "No color"], ...stack.map((f): [string, string] => [f.id, `Color: ${f.name}`])]} value={v.colorBy ?? ""} onChange={(val) => up({ colorBy: val || undefined })} /></FormField>}
         {v.type === "grid" && <FormField label="Row height"><Sel aria-label="Row height" options={HEIGHTS.map(([a, l]): [string, string] => [a, l])} value={v.rowHeight ?? "short"} onChange={(val) => up({ rowHeight: val as BaseView["rowHeight"] })} /></FormField>}
       </div></Pop>}
-    {c.editable && v.type !== "form" && <Btn icon="plus" variant="primary" onClick={onAddRecord}>Add record</Btn>}
+    {c.editable && v.type !== "form" && t.records.length > 0 && <Btn icon="plus" variant="primary" onClick={onAddRecord}>Add record</Btn>}
     </div>
   </div>;
 }

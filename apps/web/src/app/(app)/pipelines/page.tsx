@@ -11,7 +11,7 @@ import type { Pipeline, Run, StreamCfg, SyncMode } from "@/lib/types";
 
 const MODES: [SyncMode, string][] = [["full_refresh", "Full refresh: replace the copy"], ["incremental_append", "Incremental: add new rows"], ["incremental_dedupe", "Incremental: add and update by key"]];
 const SCHEDULES: [string, string][] = [["0", "Manual only"], ["15", "Every 15 minutes"], ["60", "Every hour"], ["360", "Every 6 hours"], ["1440", "Every day"]];
-type StreamRow = { name: string; s: StreamCfg; i?: Info["streams"][number]; cols: string[]; pii: { name: string }[]; open: { name: string }[] };
+type StreamRow = { name: string; s: StreamCfg; i?: Info["streams"][number]; cols: string[]; pii: { name: string }[]; open: { name: string }[]; bare: { name: string }[] };
 type Info = { streams: { name: string; primaryKey?: string; rowCount?: number; columns: { name: string; type: string; pii: string | null }[] }[] };
 
 type Cdc = { enabledAt?: string; lastAt?: string; lastLsn?: string; applied?: number; skipped?: string[]; lastError?: string };
@@ -62,7 +62,7 @@ function Detail({ p }: { p: Pipeline }) {
   };
   const streamRows: StreamRow[] = allNames.map((name) => {
     const s = cfgFor(name), i = info?.streams.find((x) => x.name === name), pii = i?.columns.filter((c) => c.pii) ?? [];
-    return { name, s, i, cols: i?.columns.map((c) => c.name) ?? [], pii, open: pii.filter((c) => !s.rules[c.name]) };
+    return { name, s, i, cols: i?.columns.map((c) => c.name) ?? [], pii, open: pii.filter((c) => !s.rules[c.name]), bare: pii.filter((c) => s.rules[c.name] === "keep") };
   });
   return (
     <>
@@ -81,12 +81,12 @@ function Detail({ p }: { p: Pipeline }) {
             filters={[
               { id: "sync", label: "Sync", value: (r) => (r.s.enabled ? "On" : "Off") },
               { id: "mode", label: "Mode", value: (r) => r.s.mode, options: MODES.map(([value, label]) => ({ value, label: label.split(":")[0] + (value === "incremental_dedupe" ? " with updates" : "") })) },
-              { id: "pii", label: "Personal data", value: (r) => (!r.pii.length ? "None found" : r.open.length ? "Held back" : "Protected") },
+              { id: "pii", label: "Personal data", value: (r) => (!r.pii.length ? "None found" : r.open.length ? "Held back" : r.bare.length ? "Not masked" : "Protected") },
             ]}
             columns={[
               { id: "sync", header: "Sync", width: 70, sortValue: (r) => (r.s.enabled ? 1 : 0), exportValue: (r) => (r.s.enabled ? "On" : "Off"), cell: (r) => <input type="checkbox" disabled={!editable} aria-label={`Sync ${r.name}`} checked={r.s.enabled} onChange={(e) => ensure(r.name, { enabled: e.target.checked })} /> },
               { id: "table", header: "Table", width: 170, hideable: false, sortValue: (r) => r.name, searchValue: (r) => r.name, cell: (r) => <b className="cell-strong">{r.name}</b> },
-              { id: "pii", header: "Personal data", width: 140, sortValue: (r) => r.open.length, exportValue: (r) => (!r.pii.length ? "None found" : r.open.length ? `${r.open.length} held back` : `${r.pii.length} protected`), cell: (r) => (!r.i ? "" : !r.pii.length ? <span className="faint">None found</span> : r.open.length ? <Link href={`/personal-data?p=${p.id}&s=${r.name}`} className="badge warn"><Icon name="shield" size={12} />{r.open.length} held back</Link> : <Link href={`/personal-data?p=${p.id}&s=${r.name}`} className="badge good"><Icon name="shield" size={12} />{r.pii.length} protected</Link>) },
+              { id: "pii", header: "Personal data", width: 140, sortValue: (r) => r.open.length, exportValue: (r) => (!r.pii.length ? "None found" : r.open.length ? `${r.open.length} held back` : r.bare.length ? `${r.bare.length} not masked` : `${r.pii.length} protected`), cell: (r) => (!r.i ? "" : !r.pii.length ? <span className="faint">None found</span> : r.open.length ? <Link href={`/personal-data?p=${p.id}&s=${r.name}`} className="badge warn"><Icon name="shield" size={12} />{r.open.length} held back</Link> : r.bare.length ? <Link href={`/personal-data?p=${p.id}&s=${r.name}`} className="badge warn"><Icon name="shield" size={12} />{r.bare.length} not masked</Link> : <Link href={`/personal-data?p=${p.id}&s=${r.name}`} className="badge good"><Icon name="shield" size={12} />{r.pii.length} protected</Link>) },
               { id: "rows", header: "Rows in source", width: 120, align: "end", sortValue: (r) => r.i?.rowCount ?? 0, cell: (r) => r.i?.rowCount?.toLocaleString("en-US") ?? "" },
               { id: "mode", header: "Sync mode", width: 270, sortValue: (r) => r.s.mode, cell: (r) => <Sel disabled={!editable} aria-label={`Sync mode for ${r.name}`} options={MODES} value={r.s.mode} onChange={(v) => ensure(r.name, { mode: v as SyncMode })} /> },
               { id: "cursor", header: "Cursor column", width: 170, sortValue: (r) => r.s.cursor ?? "", cell: (r) => (r.s.mode !== "full_refresh" ? <Sel disabled={!editable} aria-label={`Cursor column for ${r.name}`} options={[["", "Choose a column"], ...r.cols.map((c): [string, string] => [c, c])]} value={r.s.cursor ?? ""} onChange={(v) => ensure(r.name, { cursor: v || undefined })} /> : <span className="faint">Not needed</span>) },
@@ -97,8 +97,7 @@ function Detail({ p }: { p: Pipeline }) {
         </section>
         {conn?.type === "postgres" && <RealTime p={p} />}
         <section>
-          <SectionHead title="Recent syncs"><GoLink href="/runs">Run history</GoLink></SectionHead>
-          {!runs.length ? <Empty compact icon="history" title="No syncs yet" editor action={<Btn variant="primary" icon="play" disabled={running} onClick={run}>Run a sync</Btn>}>Run this pipeline to copy its tables for the first time.</Empty> : <div className="tbl-wrap"><table className="tbl"><thead><tr><th>Started</th><th>Status</th><th>Result</th><th>Started by</th></tr></thead><tbody>{runs.slice(0, 5).map((r) => <tr key={r.id}><td><Link className="plain-link" href={`/runs?r=${r.id}`}>{when(r.startedAt)}</Link></td><td><StatusBadge s={r.status} /></td><td className="muted">{r.summary}</td><td>{r.actor}</td></tr>)}</tbody></table></div>}
+          {!runs.length ? <Empty compact icon="history" title="No syncs yet" editor action={<Btn variant="primary" icon="play" disabled={running} onClick={run}>Run a sync</Btn>}>Run this pipeline to copy its tables for the first time.</Empty> : <p className="last-run"><span className="muted">Last sync</span><Link className="plain-link" href={`/runs?r=${runs[0].id}`}>{when(runs[0].startedAt)}</Link><StatusBadge s={runs[0].status} /><span className="muted">{runs[0].summary}</span><span className="grow" /><GoLink href="/runs">Run history</GoLink></p>}
         </section>
       </div>
       {settings && <Modal sheet title="Pipeline settings" onClose={() => setSettings(false)} foot={<Btn onClick={() => setSettings(false)}>Done</Btn>}><Field label="Schedule" hint="Runs while the Basalt server is up"><Sel disabled={!editable} options={SCHEDULES} value={String(p.schedule)} onChange={(v) => up((x) => ({ ...x, schedule: Number(v) }))} /></Field>

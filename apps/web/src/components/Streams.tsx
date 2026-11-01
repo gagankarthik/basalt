@@ -66,8 +66,8 @@ export function Streams() {
   const remove = async (s: Stream) => { try { await call(`/api/ingest?id=${s.id}`, { method: "DELETE" }); await load(); await refreshTables(); toast(`Removed ${s.name}`); } catch (e) { toast((e as Error).message, true); } };
   const shown = list?.find((s) => s.id === open);
   return <section style={{ display: "grid", gap: 8, alignContent: list?.length === 0 ? "start" : undefined }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}><h2>Event streams</h2>{can("editor") && !!list?.length && <Btn icon="plus" onClick={() => setAdding(true)}>Add stream</Btn>}</div>
-    {list?.length === 0 && <Empty compact icon="plug" title="No streams yet" editor action={<Btn icon="plus" variant="primary" onClick={() => setAdding(true)}>New stream</Btn>}>Send events from an application or webhook over HTTP.</Empty>}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}><h2>Event streams</h2>{can("editor") && !!list && <Btn icon="plus" onClick={() => setAdding(true)}>Add stream</Btn>}</div>
+    {list?.length === 0 && <p className="small muted">No streams yet. A stream takes events from an application or webhook over HTTP.</p>}
     {!!list?.length && <DataTable<Stream> id="streams" rows={list} rowKey={(s) => s.id} selectable={false} searchPlaceholder="Search streams" initialSort={{ id: "name", dir: "asc" }}
       columns={[
         { id: "name", header: "Stream", width: 240, hideable: false, sortValue: (s) => s.name, cell: (s) => <button type="button" className="plain-link" onClick={() => setOpen(s.id)}><b>{s.name}</b></button> },

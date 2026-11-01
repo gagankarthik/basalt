@@ -24,6 +24,31 @@ export async function POST(req: Request) {
       if (me) saveUsers(getUsers().map((u) => (u.id === me.id ? { ...u, sessions: (u.sessions ?? 0) + 1 } : u)));
       return Response.json({ ok: true }, { headers: { "Set-Cookie": clearCookie() } });
     }
+    if (b.action === "profile" || b.action === "password") {
+      const me = currentUser(req);
+      if (!me) throw new HttpError(401, "Sign in to change your account.");
+      const name = String(b.name ?? "").trim(), nextEmail = String(b.email ?? "").trim().toLowerCase(), current = String(b.current ?? ""), next = String(b.next ?? "");
+      const emailChanges = b.action === "profile" && nextEmail !== me.email;
+      if (b.action === "profile" && !name) throw new HttpError(400, "Enter your name.");
+      if (emailChanges && !/^\S+@\S+\.\S+$/.test(nextEmail)) throw new HttpError(400, "Enter a valid email address.");
+      if (b.action === "password" && next.length < 10) throw new HttpError(400, "Use a password with at least 10 characters.");
+      // How someone signs in only changes with their password, so a browser left open can't take over the account
+      if (b.action === "password" || emailChanges) {
+        const sso = getSso();
+        if (sso.enabled && sso.enforce && me.role !== "admin") throw new HttpError(403, `${sso.name} manages how you sign in.`);
+        const sender = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "local";
+        if (throttle.blocked(me.email, sender)) throw new HttpError(429, "Too many attempts. Wait a few minutes and try again.");
+        if (!checkPassword(me, current)) { throttle.fail(me.email, sender); throw new HttpError(401, "That isn't your current password."); }
+        throttle.clear(me.email, sender);
+      }
+      if (emailChanges && getUsers().some((u) => u.email === nextEmail)) throw new HttpError(400, "Someone already uses that email address.");
+      // A new password signs out every other device; this one gets a fresh session below
+      const fresh = b.action === "password" ? { ...me, ...hashPassword(next), sessions: (me.sessions ?? 0) + 1 } : { ...me, name, email: nextEmail };
+      saveUsers(getUsers().map((u) => (u.id === me.id ? fresh : u)));
+      if (b.action === "password") audit(me.name, "Changed their password", "", true);
+      else if (emailChanges) audit(me.name, "Changed their email address", `${me.email} to ${nextEmail}`, true);
+      return Response.json({ user: publicUser(fresh) }, { headers: { "Set-Cookie": sessionCookie(fresh, secure(req)) } });
+    }
     const email = String(b.email ?? "").trim().toLowerCase(), password = String(b.password ?? "");
     if (b.action === "setup") {
       if (getUsers().length) throw new HttpError(403, "This workspace is already set up. Sign in instead.");

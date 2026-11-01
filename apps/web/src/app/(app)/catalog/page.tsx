@@ -36,7 +36,7 @@ function Detail({ full, onOpen }: { full: string; onOpen: (table: string) => voi
   return (
     <>
       {exporting && <ExportDialog table={full} onClose={() => setExporting(false)} />}
-      <PageHead title={full}><Link className="btn" href={`/explore?table=${encodeURIComponent(full)}`}>Open in data views</Link>{can("editor") && <Btn icon="upload" variant="primary" onClick={() => setExporting(true)}>Export</Btn>}</PageHead>
+      <PageHead title={full}>{can("editor") && <Btn icon="upload" onClick={() => setExporting(true)}>Export</Btn>}<Link className="btn primary" href={`/explore?table=${encodeURIComponent(full)}`}>Open in data views</Link></PageHead>
       <dl className="detail-row"><div><dt>Layer</dt><dd>{STAGES.find(([id]) => id === stageOf(t.schema, t.name, config.models))?.[1]}</dd></div><div><dt>Type</dt><dd>{t.type === "VIEW" ? "View" : "Table"}</dd></div><div><dt>Rows</dt><dd className="num">{count.data ? fmt(count.data.rows[0].n) : "Counting"}</dd></div><div><dt>Viewers</dt><dd>{viewerMayRead(config.semantic, stageOf(t.schema, t.name, config.models)) ? "Can read" : "Closed"}</dd></div><div><dt>In model</dt><dd>{config.semantic?.tables.some((x) => x.full === full) ? "Yes" : "No"}</dd></div></dl>
       <Tabs tabs={["Columns", "Preview", "Lineage"]} value={tab} onChange={setTab} />
       {tab === "Columns" && <div className="body"><DataTable<ColRow> id="catalog-columns" rows={colRows} rowKey={(c) => c.name} selectable={false} searchPlaceholder="Search columns" defaultPageSize={50}

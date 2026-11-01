@@ -15,6 +15,9 @@ export const PUT = api("editor", async (req, user) => {
   let next: Config = body;
   // Changes go on top of the latest save, read after the request arrives, with no waiting from here to the write
   if (body?.delta) { try { next = applyDelta(prev, body.delta); } catch { throw new HttpError(400, "This change wasn't saved because it isn't in the right form."); } }
+  // Stamped here rather than in each screen, so every kind of edit counts
+  const bare = (d: Config["dashboards"][number]) => JSON.stringify({ ...d, updatedAt: undefined });
+  next = { ...next, dashboards: next.dashboards?.map((d) => { const was = prev.dashboards.find((x) => x.id === d.id); return was && bare(was) === bare(d) ? { ...d, updatedAt: was.updatedAt } : { ...d, updatedAt: new Date().toISOString() }; }) };
   const problem = configProblem(next);
   if (problem) throw new HttpError(400, `This change wasn't saved because ${problem} isn't in the right form.`);
   // Python runs as real code on this server, unlike sandboxed SQL, so only admins can change it

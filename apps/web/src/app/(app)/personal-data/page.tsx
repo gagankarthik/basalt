@@ -14,6 +14,7 @@ type Info = { streams: { name: string; columns: Col[] }[] };
 
 type Row = { stream: string; c: Col; rule?: Rule };
 
+const statusOf = (rule?: Rule) => (!rule ? "Held back" : rule === "keep" ? "Not masked" : "Protected");
 function Section({ p, focus }: { p: Pipeline; focus?: string | null }) {
   const { patch, can, config } = useApp();
   const [info, setInfo] = useState<Info | null>(null), [err, setErr] = useState("");
@@ -33,13 +34,13 @@ function Section({ p, focus }: { p: Pipeline; focus?: string | null }) {
     <section>
       <h2 style={{ marginBottom: 8 }}>{conn?.name}</h2>
       {err && <div className="banner bad"><Icon name="warn" />{err}</div>}
-      {!info && !err ? <Sk h={120} /> : <DataTable<Row> id="personal-data" rows={rows} rowKey={(r) => `${r.stream}.${r.c.name}`} selectable={false} searchPlaceholder="Search columns" empty={<Empty compact icon="shield" title="No personal data found">The scan found no personal data in this source.</Empty>} initialFilters={focus ? { table: [focus] } : undefined}
-        filters={[{ id: "status", label: "Status", value: (r) => (r.rule ? "Rule set" : "Held back") }, { id: "table", label: "Table", value: (r) => r.stream }, { id: "found", label: "Found", value: (r) => r.c.pii }]}
+      {!info && !err ? <Sk h={120} /> : <DataTable<Row> id="personal-data" rows={rows} rowKey={(r) => `${r.stream}.${r.c.name}`} selectable={false} searchPlaceholder="Search columns" initialSort={{ id: "status", dir: "asc" }} empty={<Empty compact icon="shield" title="No personal data found">The scan found no personal data in this source.</Empty>} initialFilters={focus ? { table: [focus] } : undefined}
+        filters={[{ id: "status", label: "Status", value: (r) => statusOf(r.rule) }, { id: "table", label: "Table", value: (r) => r.stream }, { id: "found", label: "Found", value: (r) => r.c.pii }]}
         columns={[
           { id: "table", header: "Table", width: 190, sortValue: (r) => r.stream, searchValue: (r) => r.stream, cell: (r) => r.stream },
           { id: "column", header: "Column", width: 200, hideable: false, sortValue: (r) => r.c.name, searchValue: (r) => r.c.name, cell: (r) => r.c.name },
           { id: "found", header: "Found", width: 170, sortValue: (r) => r.c.pii, searchValue: (r) => r.c.pii ?? "", cell: (r) => r.c.pii },
-          { id: "status", header: "Status", width: 130, sortValue: (r) => (r.rule ? 1 : 0), cell: (r) => (r.rule ? <span className="badge dot good">Rule set</span> : <span className="badge dot warn">Held back</span>) },
+          { id: "status", header: "Status", width: 130, sortValue: (r) => (!r.rule ? 0 : r.rule === "keep" ? 1 : 2), cell: (r) => (r.rule && r.rule !== "keep" ? <span className="muted">Protected</span> : <span className="badge dot warn">{statusOf(r.rule)}</span>) },
           { id: "rule", header: "Rule", width: 320, hideable: false, cell: (r) => <Sel disabled={!can("editor")} aria-label={`Rule for ${r.stream}.${r.c.name}`} options={[...(r.rule ? [] : [["", r.c.suggested ? `Choose a rule (suggested: ${RULE_LABELS[r.c.suggested]})` : "Choose a rule"] as [string, string]]), ...Object.entries(RULE_LABELS)]} value={r.rule ?? ""} onChange={(v) => v && setRule(r.stream, r.c.name, v as Rule)} /> },
         ]} />}
     </section>

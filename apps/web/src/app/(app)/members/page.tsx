@@ -77,7 +77,7 @@ export default function Members() {
             columns={[
               { id: "name", header: "Name", width: 280, hideable: false, sortValue: (m) => m.name, searchValue: (m) => `${m.name} ${m.email}`, cell: (m) => <span className="person"><Avatar name={m.name} /><span className="stack"><b>{m.name}{m.id === user!.id && <span className="badge" style={{ marginLeft: 6 }}>You</span>}</b><small>{m.email}</small></span></span> },
               { id: "role", header: "Role", width: 170, sortValue: (m) => m.role, cell: (m) => <Sel aria-label={`Role for ${m.name}`} options={ROLES} value={m.role} onChange={(v) => act({ action: "role", id: m.id, role: v }, `${m.name} is now ${v}`)} /> },
-              { id: "mfa", header: "Two-factor", width: 130, sortValue: (m) => (m.mfaOn ? 1 : 0), cell: (m) => (m.mfaOn ? <span className="badge good">On</span> : <span className="muted">Off</span>) },
+              { id: "mfa", header: "Two-factor", width: 130, sortValue: (m) => (m.mfaOn ? 1 : 0), cell: (m) => (m.mfaOn ? <span className="muted">On</span> : <span className="badge warn">Off</span>) },
               { id: "added", header: "Added", width: 180, sortValue: (m) => m.createdAt, cell: (m) => when(m.createdAt) },
               { id: "actions", header: "", width: 260, hideable: false, align: "end", cell: (m) => (m.id !== user!.id ? <span className="row-actions"><Btn variant="ghost" onClick={() => act({ action: "end-sessions", id: m.id }, `${m.name} is signed out`)}>Sign out</Btn>{m.mfaOn && <Btn variant="ghost" onClick={() => act({ action: "mfa-reset", id: m.id }, `Two-factor sign-in reset for ${m.name}`)}>Reset two-factor</Btn>}<Btn icon="trash" variant="ghost" aria-label={`Remove ${m.name}`} onClick={() => setDel(m)} /></span> : null) },
             ]} />

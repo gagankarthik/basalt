@@ -50,7 +50,7 @@ export function Cell({ col, v, tone, colored, find, inert }: { col: GridCol; v: 
   // IDs and keys are labels, not quantities, so they get no thousands separators
   const shown = formatField(v, col.kind, col.display, { locale: settings?.locale, currency: settings?.currency });
   const number = shown ?? (/(^|_)(id|key|code|zip)$/i.test(col.name) ? String(v) : fmt(v));
-  const label = shown ?? String(v), href = inert ? null : fieldHref(v, col.display);
+  const label = shown ?? (col.kind === "bool" ? (v ? "Yes" : "No") : String(v)), href = inert ? null : fieldHref(v, col.display);
   // A stored value only ever links to the web or an email address. Inside a row that opens on click, so the click stays here
   if (href) return <a className="link" href={href} target="_blank" rel="noreferrer noopener" onClick={(e) => e.stopPropagation()}><Marked text={label} find={find} /></a>;
   if (colored) { const c = hueOf(String(v)); return <span className="badge dot" style={{ color: c, background: `color-mix(in srgb, ${c} 10%, transparent)` }}>{col.kind === "number" ? number : label}</span>; }

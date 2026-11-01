@@ -90,7 +90,7 @@ textarea.input { height: auto; padding: 6px 8px; line-height: 1.45; resize: vert
 .tbl tr:last-child td { border-bottom: 0; }
 .tbl tbody tr.click { cursor: pointer; }
 .tbl tbody tr.click:hover { background: var(--bg-2); }
-.tbl tbody tr.on { background: var(--accent-soft); }
+.tbl tbody tr.on { background: var(--bg-3); }
 .tbl .r { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* data grid */
@@ -239,7 +239,7 @@ body { background: var(--shell); font-feature-settings: "cv11", "ss01"; }
 .dt td > span { max-width: 100%; }
 .dt td > span:not(.badge) { display: block; overflow: hidden; text-overflow: ellipsis; }
 .dt tbody tr:hover td { background: var(--bg-2); }
-.dt tbody tr.on td { background: var(--accent-soft); }
+.dt tbody tr.on td { background: var(--bg-3); }
 .dt tbody tr:focus-visible td { background: var(--accent-soft); }
 .dt thead th.frozen { z-index: 5; }
 .dt .frozen { position: sticky; z-index: 2; box-shadow: inset -1px 0 0 var(--line); }
@@ -1287,5 +1287,15 @@ input::placeholder, textarea::placeholder { color: var(--ink-3) !important; opac
 .auth-card { display: grid; gap: 16px; width: 100%; max-width: 400px; }
 /* Once a session ends nothing behind the dialog stays readable, because the screen may be unattended */
 .session-shield { position: fixed; inset: 0; z-index: 900; background: var(--bg); }
-/* Workspace is a summary: healthy rows stay quiet, so only a problem carries colour */
-.home .badge.good { padding: 0; background: none; box-shadow: none; color: var(--ink-2); }
+/* Healthy rows stay quiet in every table, so only a problem carries colour */
+.tbl td .badge.good, .dt td .badge.good, .last-run .badge.good { padding: 0; background: none; box-shadow: none; color: var(--ink-2); }
+.last-run { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-1) var(--gap-2); margin: 0; }
+.set-nav { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: var(--gap-2); padding: var(--gap-1) 0; background: var(--bg); border-bottom: 1px solid var(--line); font-size: 14px; }
+.set-nav a { color: var(--ink-2); text-decoration: none; } .set-nav a:hover { color: var(--ink); }
+.set > section { scroll-margin-top: 48px; }
+.conn > svg { flex: none; }
+.nb-templates { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); margin-top: var(--gap-2); }
+/* Base toolbar: dividers between its groups of controls */
+.bx-sep { flex: none; width: 1px; height: 20px; background: var(--line-2); margin-inline: 4px; }
+.bx-tools > .bx-search { margin-left: auto; }
+@container (max-width: 800px) { .bx-sep { display: none; } .bx-tools > .bx-search { margin-left: 0; } }

@@ -1,3 +1,4 @@
+import { PAID_REVENUE } from "@/lib/onboarding";
 import { compileSteps } from "@/lib/transform";
 import type { Config, Filter, Model, Pipeline, StreamCfg, Widget } from "@/lib/types";
 
@@ -152,10 +153,10 @@ export function sampleConfig(): Partial<Config> {
       ] },
     ],
     metrics: [
-      { id: "m-rev", name: "Revenue collected", description: "Sum of paid payment amounts.", table: PAY, measure: { column: "amount", agg: "sum" }, dateColumn: "paid_at", format: "compact", owner: "Finance" },
+      { id: "m-rev", name: "Revenue collected", description: "Sum of paid payment amounts.", table: PAY, measure: { column: "amount", agg: "sum", expr: PAID_REVENUE }, dateColumn: "paid_at", format: "compact", owner: "Finance" },
       { id: "m-subs", name: "Subscriptions", description: "Unique subscriptions ever started.", table: SUB, measure: { column: "subscription_id", agg: "count_distinct" }, dateColumn: "started_at", format: "number", owner: "Growth" },
       { id: "m-orders", name: "Orders", description: "Meal orders placed.", table: ORD, measure: { column: "order_id", agg: "count" }, dateColumn: "ordered_at", format: "number", owner: "Operations" },
-      { id: "m-del", name: "Average delivery time", description: "Average minutes from dispatch to delivery.", table: ORD, measure: { column: "delivery_minutes", agg: "avg" }, dateColumn: "ordered_at", format: "number", owner: "Operations" },
+      { id: "m-del", name: "Average delivery time, minutes", description: "Average minutes from dispatch to delivery.", table: ORD, measure: { column: "delivery_minutes", agg: "avg" }, dateColumn: "ordered_at", format: "number", owner: "Operations" },
     ],
     queries: [{ id: "q-top", name: "Top customers by lifetime value", owner: "Data team", updatedAt: now, sql: "SELECT customer_id, full_name, kitchen, plan, lifetime_value\nFROM analytics.dim_customers\nORDER BY lifetime_value DESC\nLIMIT 50;" }],
   };

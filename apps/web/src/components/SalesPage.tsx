@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "./icons";
 import { Nav } from "./Landing";
 import { Sel } from "./ui";
@@ -10,6 +10,8 @@ const POINTS = ["See it with your own kind of data", "Check whether it fits your
 
 export default function SalesPage() {
   const [f, setF] = useState({ name: "", email: "", company: "", teamSize: "1 to 10", sources: "", message: "", website: "" });
+  // Signed-in people don't retype what we already know
+  useEffect(() => { fetch("/api/auth").then((r) => r.json()).then((r) => { if (r.user) setF((x) => ({ ...x, name: x.name || r.user.name, email: x.email || r.user.email })); }, () => {}); }, []);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [done, setDone] = useState(false);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   const submit = async (e: React.FormEvent) => {
@@ -27,7 +29,7 @@ export default function SalesPage() {
       <Nav base="/" />
       <section className="lp-sales"><div className="lp-wrap lp-sales-in">
         <div>
-          <h1>Talk to sales.</h1>
+          <h1>Talk to sales</h1>
           <p>Tell us about your data and your team, and we&apos;ll get back to you by email.</p>
           <ul>{POINTS.map((t) => <li key={t}><Icon name="check" size={18} />{t}</li>)}</ul>
         </div>

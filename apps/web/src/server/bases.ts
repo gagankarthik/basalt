@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import vm from "node:vm";
 import { applyOp, compute, recById, matches, newTable, newView, restoredBase, snapshotDue, snapshotsToDrop, viewRecords, warehouseColumns, type Automation, type Base, type BaseSnapshot, type Field, type Op, type Table } from "@/lib/base";
+import { templateTables } from "@/lib/baseTemplates";
 import { lit, q } from "@/lib/sql";
 import { raise, sendWebhook } from "./alerts";
 import { dataPath, withConn } from "./engine";
@@ -73,7 +74,7 @@ export function createBase(name: string, template: string, by: string) {
   const at = new Date().toISOString(), used = new Set([...store.all.values()].map((b) => b.slug));
   const root = name.toLowerCase().replace(/\W+/g, "_").replace(/^_+|_+$/g, "") || "base";
   let slug = root, i = 2; while (used.has(slug)) slug = `${root}_${i++}`;
-  const b: Base = { id: id(), name: name.trim() || "Untitled base", slug, version: 1, nextAuto: 100, publish: false, automations: [], updatedAt: at, createdBy: by, tables: template === "starter" ? starter(by, at) : [newTable(id(), "Table 1", id)] };
+  const b: Base = { id: id(), name: name.trim() || "Untitled base", slug, version: 1, nextAuto: 100, publish: false, automations: [], updatedAt: at, createdBy: by, tables: template === "starter" ? starter(by, at) : templateTables(template, id, by, at) ?? [newTable(id(), "Table 1", id)] };
   store.all.set(b.id, b); writeNow(b);
   return b;
 }

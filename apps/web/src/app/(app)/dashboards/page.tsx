@@ -4,7 +4,7 @@ import { useState } from "react";
 import DataTable from "@/components/DataTable";
 import { Avatar, Btn, Confirm, Empty, Field, IconTile, Modal, PageHead, Sel } from "@/components/ui";
 import { autoWidgets } from "@/lib/autoDashboard";
-import { uid, useApp, useNewHandler, useTables } from "@/lib/client";
+import { uid, useApp, useNewHandler, useTables , when } from "@/lib/client";
 import type { Dashboard } from "@/lib/types";
 
 export default function Dashboards() {
@@ -27,6 +27,7 @@ export default function Dashboards() {
               { id: "name", header: "Name", width: 320, hideable: false, sortValue: (d) => d.name, searchValue: (d) => `${d.name} ${d.description}`, cell: (d) => <span className="person"><IconTile icon="chart" /><span className="stack"><b>{d.name}</b><small>{d.description}</small></span></span> },
               { id: "visuals", header: "Visuals", width: 110, align: "end", sortValue: (d) => d.widgets.length, cell: (d) => d.widgets.length },
               { id: "owner", header: "Owner", width: 190, sortValue: (d) => d.owner, cell: (d) => <span className="person"><Avatar name={d.owner} size={24} />{d.owner}</span> },
+              { id: "updated", header: "Last changed", width: 170, sortValue: (d) => d.updatedAt ?? "", cell: (d) => (d.updatedAt ? when(d.updatedAt) : <span className="faint">Not recorded</span>) },
               { id: "actions", header: "", width: 70, hideable: false, align: "end", cell: (d) => (can("editor") ? <span onClick={(e) => e.stopPropagation()}><Btn icon="trash" variant="ghost" aria-label={`Delete ${d.name}`} onClick={() => setDel(d)} /></span> : null) },
             ]} />
         )}

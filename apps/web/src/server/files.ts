@@ -3,6 +3,7 @@ import { rotateAudit } from "@/lib/hosted";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { DATA_DIR, dataPath } from "./engine";
+import { repairSampleMetrics } from "@/lib/onboarding";
 import { defaultConfig } from "./seed";
 import type { AuditEntry, Config, Member, RlsRule, Role, Run, SalesRequest } from "@/lib/types";
 
@@ -17,7 +18,7 @@ export function writeJson(file: string, value: unknown) {
   fs.renameSync(tmp, p);
 }
 
-export const getConfig = () => readJson<Config>("config.json", defaultConfig());
+export const getConfig = () => repairSampleMetrics(readJson<Config>("config.json", defaultConfig()));
 export const saveConfig = (c: Config) => writeJson("config.json", c);
 
 export const getRuns = () => readJson<Run[]>("runs.json", []);

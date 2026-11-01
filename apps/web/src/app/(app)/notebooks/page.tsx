@@ -6,7 +6,7 @@ import { python as pythonLang } from "@codemirror/lang-python";
 import { sql as sqlLang } from "@codemirror/lang-sql";
 import { Chart } from "@/components/Chart";
 import { ResultGrid } from "@/components/DataGrid";
-import { Icon } from "@/components/icons";
+import { Icon, type IconName } from "@/components/icons";
 import { Btn, Confirm, Empty, Field, Modal, MoreMenu, PageHead, PermissionDenied, Sel, Spinner, Split, Tabs, toast } from "@/components/ui";
 import { call, refreshTables, sql, uid, useApp, useIsDark, useNewHandler, useTables } from "@/lib/client";
 import { templateCells, TEMPLATES } from "@/lib/analysisTemplates";
@@ -108,8 +108,8 @@ function Editor({ n, set, onDelete }: { n: Notebook; set: (next: Partial<Noteboo
 }
 
 /** Starts empty, or from a standard analysis once its table and columns are chosen. */
-function NewNotebook({ onClose, onCreate }: { onClose: () => void; onCreate: (name: string, cells: NotebookCell[]) => void }) {
-  const tables = useTables() ?? [], [name, setName] = useState(""), [tpl, setTpl] = useState(""), [p, setP] = useState<Record<string, string>>({});
+function NewNotebook({ start, onClose, onCreate }: { start: string; onClose: () => void; onCreate: (name: string, cells: NotebookCell[]) => void }) {
+  const tables = useTables() ?? [], [name, setName] = useState(""), [tpl, setTpl] = useState(start), [p, setP] = useState<Record<string, string>>({});
   const t = TEMPLATES.find((x) => x.id === tpl), tableNames = tables.map((x): [string, string] => [x.full, x.full]);
   const columnsOf = (full?: string) => (tables.find((x) => x.full === full)?.columns ?? []).map((c): [string, string] => [c.name, c.name]);
   const ready = !t || (!!p.table && t.fields.every((f) => !!p[f.key]));
@@ -124,16 +124,19 @@ function NewNotebook({ onClose, onCreate }: { onClose: () => void; onCreate: (na
   </Modal>;
 }
 
+const TEMPLATE_ICONS: Record<string, IconName> = { profile: "table", quality: "check", cohort: "people", funnel: "funnel", segments: "pie", trend: "line", abtest: "bar", rootcause: "search", reconcile: "copy" };
+
 function Notebooks() {
   const { config, patch, can, user } = useApp(), pre = useSearchParams();
-  const list = config?.notebooks ?? [], [sel, setSel] = useState(pre.get("n")), [naming, setNaming] = useState(false), [del, setDel] = useState<Notebook | null>(null);
-  useNewHandler("notebook", () => setNaming(true));
+  const list = config?.notebooks ?? [], [sel, setSel] = useState(pre.get("n")), [naming, setNaming] = useState(false), [start, setStart] = useState(""), [del, setDel] = useState<Notebook | null>(null);
+  const begin = (id = "") => { setStart(id); setNaming(true); };
+  useNewHandler("notebook", () => begin());
   if (!can("editor")) return <><PageHead title="Notebooks" /><PermissionDenied title="Notebooks are for editors and admins" /></>;
   const current = list.find((x) => x.id === sel) ?? list[0];
   const save = (id: string, p: Partial<Notebook>) => patch((c) => ({ ...c, notebooks: (c.notebooks ?? []).map((x) => (x.id === id ? { ...x, ...p, updatedAt: new Date().toISOString() } : x)) }));
   const create = (name: string, cells: NotebookCell[]) => { const id = uid(); patch((c) => ({ ...c, notebooks: [...(c.notebooks ?? []), { id, name, owner: user!.name, updatedAt: new Date().toISOString(), cells }] })); setSel(id); setNaming(false); };
-  const dialog = naming && <NewNotebook onClose={() => setNaming(false)} onCreate={create} />;
-  if (!current) return <><PageHead title="Notebooks" /><div className="body"><Empty icon="notebook" title="No notebooks yet" editor action={<Btn variant="primary" icon="plus" onClick={() => setNaming(true)}>New notebook</Btn>}>Mix SQL, Python and notes on one page, or start from a standard analysis such as cohort retention or an A/B test.</Empty></div>{dialog}</>;
+  const dialog = naming && <NewNotebook start={start} onClose={() => setNaming(false)} onCreate={create} />;
+  if (!current) return <><PageHead title="Notebooks" /><div className="body"><Empty icon="notebook" title="No notebooks yet" editor action={<Btn variant="primary" icon="plus" onClick={() => begin()}>New notebook</Btn>}>Mix SQL, Python and notes on one page, or start from a standard analysis.</Empty><div className="conn-grid nb-templates">{TEMPLATES.map((t) => <button key={t.id} className="conn" onClick={() => begin(t.id)}><Icon name={TEMPLATE_ICONS[t.id] ?? "notebook"} size={22} /><div><b>{t.name}</b><div className="small muted">{t.note}</div></div></button>)}</div></div>{dialog}</>;
   return <div className="fill">
     <Split id="notebooks" label="Notebooks" width={240}>
       <aside className="tree">{list.map((x) => <button key={x.id} className={x.id === current.id ? "on" : ""} onClick={() => setSel(x.id)}><Icon name="notebook" size={16} />{x.name}</button>)}<button onClick={() => setNaming(true)}><Icon name="plus" size={16} />New notebook</button></aside>

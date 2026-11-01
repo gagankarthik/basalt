@@ -40,7 +40,7 @@ export function FlowGraph({ nodes, edges, selected, onPick }: { nodes: FlowNode[
   useEffect(() => { const el = box.current?.parentElement; if (!el) return; const ro = new ResizeObserver(() => setAvail(el.clientWidth - 32)); ro.observe(el); return () => ro.disconnect(); }, []);
   const cols = [...new Set(nodes.map((n) => n.col))].sort((a, b) => a - b), pos = new Map<string, { x: number; y: number }>();
   // Columns share the width; only a very deep graph scrolls
-  const GX = 32, W = Math.max(136, Math.min(280, avail ? (avail - GX * (cols.length - 1)) / cols.length : 212)), H = 72, GY = 8, TOP = 30, chars = Math.floor((W - 48) / 6.4);
+  const GX = 32, W = Math.max(136, Math.min(280, avail ? Math.floor((avail - 2 - GX * (cols.length - 1)) / cols.length) : 212)), H = 72, GY = 8, TOP = 30, chars = Math.floor((W - 48) / 6.4);
   const heads: { x: number; label: string }[] = [];
   cols.forEach((col, c) => {
     const x = c * (W + GX) + 1, here = nodes.filter((n) => n.col === col);
