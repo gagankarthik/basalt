@@ -1184,6 +1184,10 @@ h2 { font-size: 16px; font-weight: 600; }
 .cookie button { border-radius: 999px; }
 /* The logo and the sidebar's icons share one left edge */
 .topbar { height: 56px; padding: 0 16px; }
+/* Items under a group heading sit one step in, so the sidebar reads as a hierarchy. The rail has no headings, so it stays flat */
+.sb-group h4 ~ .sb-item { margin-left: 12px; }
+@media (min-width: 861px) { .side-rail .sb-group h4 ~ .sb-item { margin-left: 0; } }
+@media (min-width: 861px) and (max-width: 1199px) { .side-auto .sb-group h4 ~ .sb-item { margin-left: 0; } }
 /* One column: every sidebar block spans 8px to 224px, and icons line up with the logo at 16px */
 @media (min-width: 861px) {
   .sb { padding: 8px; gap: 8px; }

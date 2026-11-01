@@ -4,7 +4,7 @@ export type NavItem = { href: string; label: string; icon: IconName };
 
 /** Sidebar groups. */
 export const NAV: { title: string; items: NavItem[] }[] = [
-  { title: "", items: [{ href: "/home", label: "Home", icon: "home" }] },
+  { title: "", items: [{ href: "/home", label: "Workspace", icon: "home" }] },
   { title: "Ingest", items: [
     { href: "/connections", label: "Connections", icon: "plug" },
     { href: "/pipelines", label: "Pipelines", icon: "pipeline" },
@@ -21,7 +21,7 @@ export const NAV: { title: string; items: NavItem[] }[] = [
     { href: "/dashboards", label: "Dashboards", icon: "dashboard" },
     { href: "/metrics", label: "Metrics", icon: "metric" },
   ] },
-  { title: "Workspace", items: [
+  { title: "Manage", items: [
     { href: "/personal-data", label: "Personal data", icon: "shield" },
     { href: "/settings", label: "Settings", icon: "settings" },
   ] },

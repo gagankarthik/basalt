@@ -42,7 +42,7 @@ export default function Home() {
 
   return (
     <>
-      <PageHead title="Home" />
+      <PageHead title="Workspace" />
       <div className="body home">
         <FlowStrip steps={[
           { label: "Connect", value: config.connections.length, sub: config.connections.length === 1 ? "source" : "sources", href: "/connections", icon: "plug", todo: !config.connections.length },

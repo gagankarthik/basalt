@@ -22,7 +22,7 @@ If you're the first person in a new workspace, you'll see a setup screen instead
 
 ## Where your data comes from
 
-A new workspace's Home page offers each way in. **Connect your own data** copies from a database or cloud storage. **Upload a file** imports one. **Start in Basalt's database** gives you editable tables kept on this server, with nothing else to set up. Admins of an empty workspace can also load the sample company.
+The Workspace page offers each way in when you have no data yet. **Connect your own data** copies from a database or cloud storage. **Upload a file** imports one. **Start in Basalt's database** gives you editable tables kept on this server, with nothing else to set up. Admins of an empty workspace can also load the sample company.
 
 ## Your first report
 
