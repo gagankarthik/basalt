@@ -54,6 +54,14 @@ Most small companies end up paying for five separate tools to move, store, trans
 - A first version built for you from any table
 - Export to CSV, JSON, Parquet, Excel or XML, to a download, a bucket or a cloud warehouse
 
+## Repository layout
+
+- `apps/web`: the Basalt application (Next.js and TypeScript), including its Python model and notebook runners.
+- `services/cdc-worker`: the real-time sync worker (Rust).
+- `data`: your data, created at the repo root on first run. Set `BASALT_DATA` to keep it elsewhere.
+
+Run commands from the repo root. `npm run dev`, `npm test` and `npm run lint` go to the app, and `npm run worker:test` to the worker.
+
 ## Install
 
 You need Node 24.
@@ -88,13 +96,19 @@ Follow the install steps on the machine, or build the included `Dockerfile` and 
 
 **Managed PostgreSQL.** TLS verifies the server certificate. Paste your provider's CA certificate on the connection for RDS, Aurora and Cloud SQL. Azure Database uses public CAs, so it needs none. For Cloud SQL by IP address, also choose to check the CA only, because its certificate doesn't name the IP.
 
+## Hosting for customers
+
+Set `BASALT_HOSTED=1` when Basalt runs on your servers for other companies, one container and disk per customer. It refuses what's only safe on someone's own server: signing in with the server's own cloud identity, connections to internal addresses, Airbyte connectors and Python. Give customer containers no route to internal networks as well, because a hostname can change after it's checked.
+
+`/api/health` answers without sign-in, for a load balancer or monitor. It returns 503 if the warehouse or disk can't be used.
+
 ## Real-time sync
 
 Real-time sync needs a small worker alongside Basalt, and requires Rust to build.
 
 1. On your PostgreSQL server, set `wal_level=logical` and create a login with the `REPLICATION` role.
 2. In Basalt, open the pipeline and choose **Turn on real-time sync**. Copy the settings it shows.
-3. Build the worker with `cargo build --release` in the `worker` folder, then run it with those settings.
+3. Build the worker with `npm run worker:build`, then run `target/release/basalt-cdc` with those settings.
 4. Run one full sync.
 
 The worker requires TLS unless `SOURCE_URL` sets its own `sslmode`, so add `?sslmode=disable` for a local server without TLS. It checks every 200 ms (`POLL_MS`). Rebuild it after upgrading Basalt, because it now sends column types so masks match a sync.
@@ -126,8 +140,8 @@ With a table rebuild running continuously, 10,000 changes a second took 638 / 1,
 - PostgreSQL certificate checks were tested on a local server with test certificates, not on RDS, Aurora, Cloud SQL or Azure Database. MySQL and MariaDB connections encrypt but don't yet verify the certificate.
 - The real-time worker uses the machine's own trusted certificates, so a private CA must be installed there.
 - SQL Server, Azure SQL and Azure Synapse aren't available yet. The Dockerfile hasn't been built or run yet.
-- Delta Lake tables can be read but not written.
-- Basalt runs on one server and doesn't spread work across machines.
+- Delta Lake exports replace the whole table as a new version, without partitions or removing old files. Don't let another system write the same table at the same time.
+- Basalt runs on one server and doesn't spread work across machines. SQL queries stop after 60 seconds for viewers and 5 minutes for others, which `BASALT_QUERY_SECONDS` changes.
 - Automation scripts aren't sandboxed, so only admins can edit them.
 - DAX covers measures, including time intelligence, but not calculated tables or columns. Questions in Ask match words rather than using AI.
 - Email needs your own mail server, set in Settings. Set `BASALT_URL` so report emails can link back.

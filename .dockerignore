@@ -1,8 +1,8 @@
 data
 .git
-.next
-.next-test
-node_modules
-worker/target
-*.log
-.env*
+**/.next
+**/.next-*
+**/node_modules
+target
+**/*.log
+**/.env*
